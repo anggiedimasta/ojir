@@ -27,7 +27,7 @@ const config = {
         ],
       },
       {
-        source: "/sw.ts",
+        source: "/sw.js",
         headers: [
           {
             key: "Content-Type",
