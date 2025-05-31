@@ -1,6 +1,4 @@
-/// <reference lib="webworker" />
-
-declare const self: ServiceWorkerGlobalScope;
+// Service Worker for Ojir PWA
 
 const CACHE_NAME = 'ojir-cache-v1';
 const urlsToCache = [
@@ -10,17 +8,17 @@ const urlsToCache = [
   '/icons/icon-512x512.png'
 ];
 
-self.addEventListener('install', (event: ExtendableEvent) => {
+self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+      .then(function(cache) { return cache.addAll(urlsToCache); })
   );
 });
 
-self.addEventListener('fetch', (event: FetchEvent) => {
+self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
+      .then(function(response) {
         if (response) {
           return response;
         }
