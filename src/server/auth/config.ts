@@ -1,6 +1,8 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
-import DiscordProvider from "next-auth/providers/discord";
+import GoogleProvider from "next-auth/providers/google";
+import { eq, and } from "drizzle-orm";
+import { env } from "~/env";
 
 import { db } from "~/server/db";
 import {
@@ -20,15 +22,15 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
+    accessToken?: string;
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface Account {
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+  }
 }
 
 /**
@@ -37,17 +39,25 @@ declare module "next-auth" {
  * @see https://next-auth.js.org/configuration/options
  */
 export const authConfig = {
+  debug: env.NODE_ENV === "development",
   providers: [
-    DiscordProvider,
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
+    GoogleProvider({
+      clientId: env.AUTH_GOOGLE_ID,
+      clientSecret: env.AUTH_GOOGLE_SECRET,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code",
+          scope: [
+            "openid",
+            "email",
+            "profile",
+            "https://www.googleapis.com/auth/calendar"
+          ].join(" ")
+        }
+      }
+    }),
   ],
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -56,12 +66,103 @@ export const authConfig = {
     verificationTokensTable: verificationTokens,
   }),
   callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
-      },
-    }),
+    async signIn() {
+      return true;
+    },
+    async jwt({ token, account }) {
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.expiresAt = account.expires_at;
+        token.scope = account.scope;
+      }
+      return token;
+    },
+    async session({ session, user, token }) {
+      if (user?.id) {
+        const account = await db.query.accounts.findFirst({
+          where: (accounts, { eq, and }) =>
+            and(
+              eq(accounts.userId, user.id),
+              eq(accounts.provider, "google")
+            )
+        });
+
+        if (account) {
+          const isExpired = account.expires_at ? Date.now() >= (account.expires_at * 1000 - 5 * 60 * 1000) : true;
+          const hasCalendarScope = account.scope?.includes("https://www.googleapis.com/auth/calendar");
+
+          if ((isExpired || !hasCalendarScope) && account.refresh_token) {
+            try {
+              const response = await fetch("https://oauth2.googleapis.com/token", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                  client_id: env.AUTH_GOOGLE_ID,
+                  client_secret: env.AUTH_GOOGLE_SECRET,
+                  grant_type: "refresh_token",
+                  refresh_token: account.refresh_token,
+                  scope: [
+                    "openid",
+                    "email",
+                    "profile",
+                    "https://www.googleapis.com/auth/calendar"
+                  ].join(" ")
+                }),
+              });
+
+              if (response.ok) {
+                const tokens = await response.json();
+
+                await db
+                  .update(accounts)
+                  .set({
+                    access_token: tokens.access_token,
+                    refresh_token: tokens.refresh_token || account.refresh_token,
+                    expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
+                    scope: tokens.scope || account.scope
+                  })
+                  .where(
+                    and(
+                      eq(accounts.userId, user.id),
+                      eq(accounts.provider, "google")
+                    )
+                  );
+
+                session.accessToken = tokens.access_token;
+              } else {
+                session.accessToken = account.access_token || undefined;
+              }
+            } catch {
+              session.accessToken = account.access_token || undefined;
+            }
+          } else {
+            session.accessToken = token?.accessToken as string || account.access_token || undefined;
+          }
+        }
+      }
+
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: user.id,
+        },
+      };
+    },
+    redirect: ({ url, baseUrl }) => {
+      if (url.startsWith("/api/auth/signout")) {
+        return baseUrl;
+      }
+      if (url.startsWith("/api/auth/signin")) {
+        return `${baseUrl}/dashboard`;
+      }
+      return url;
+    },
+  },
+  pages: {
+    signIn: "/signin",
   },
 } satisfies NextAuthConfig;
