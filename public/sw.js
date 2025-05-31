@@ -9,20 +9,20 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', function(event) {
-  event.waitUntil(
+  /** @type {any} */ (event).waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) { return cache.addAll(urlsToCache); })
   );
 });
 
 self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request)
+  /** @type {any} */ (event).respondWith(
+    caches.match((/** @type {any} */ (event)).request)
       .then(function(response) {
         if (response) {
           return response;
         }
-        return fetch(event.request);
+        return fetch((/** @type {any} */ (event)).request);
       })
   );
 });
