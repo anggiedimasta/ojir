@@ -164,7 +164,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
 
   return (
     <div className={`transition-all duration-200 ease-out transform-gpu ${isCollapsed ? 'pl-20' : 'pl-72'}`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 gap-6" style={{ contain: 'layout', willChange: 'transform' }}>
         {/* Welcome Card */}
         <div className="col-span-1">

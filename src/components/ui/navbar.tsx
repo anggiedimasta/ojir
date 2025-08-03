@@ -15,18 +15,7 @@ import {
   MessageSquare,
   ChevronDown,
 } from "lucide-react";
-
-interface MenuItem {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ReactNode;
-}
-
-interface MenuSection {
-  title: string;
-  items: MenuItem[];
-}
+import type { MenuItem, MenuSection } from "~/entities/ui";
 
 const menuItems: MenuSection[] = [
   {

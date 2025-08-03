@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
 
-interface StatProps {
+interface CountingStatProps {
   value: string;
   label: string;
   color: string;

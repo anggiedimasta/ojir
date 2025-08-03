@@ -8,46 +8,73 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "~/components/ui/card";
 import { useToast } from "~/components/ui/use-toast";
-import { type TRPCClientError } from "@trpc/client";
-import { type UseQueryOptions } from "@tanstack/react-query";
-
-interface CalendarEvent {
-  id: string;
-  title: string;
-  description: string | null;
-  startTime: Date;
-  endTime: Date;
-  isGoogleEvent?: boolean;
-}
-
-type CalendarView = 'month' | 'week' | 'day';
+import { MonthView } from "./_components/month-view";
+import { WeekView } from "./_components/week-view";
+import { DayView } from "./_components/day-view";
+import { type CalendarView } from "~/app/dashboard/calendar/_components/types";
 
 export default function CalendarPage() {
   const { isCollapsed } = useSidebarStore();
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
-  const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Get view and date from URL path
+  const pathParts = pathname.split('/');
+  const currentView = pathname === '/dashboard/calendar' ? 'month' : (pathParts[3] as CalendarView);
+  const dateFromUrl = pathParts[4];
+
+  const parseDateFromUrl = (dateStr: string) => {
+    const parts = dateStr.split('-').map(Number);
+    if (parts.length === 3 && parts.every(part => !isNaN(part))) {
+      // We know these are numbers because of the every() check above
+      const year = parts[0] as number;
+      const month = parts[1] as number;
+      const day = parts[2] as number;
+      return new Date(year, month - 1, day);
+    }
+    return new Date();
+  };
+
+  // Initialize currentDate from URL or use today's date
+  const [currentDate, setCurrentDate] = useState(() => {
+    if (dateFromUrl) {
+      return parseDateFromUrl(dateFromUrl);
+    }
+    return new Date();
+  });
+
   const [hasMounted, setHasMounted] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
-  // Get view from URL path or default to 'month'
-  const currentView = pathname === '/dashboard/calendar' ? 'month' : (pathname.split('/').pop() as CalendarView);
-
-  const updateView = (newView: CalendarView) => {
-    if (newView === 'month') {
-      router.push('/dashboard/calendar');
-    } else {
-      router.push(`/dashboard/calendar/${newView}`);
+  // Update currentDate if URL changes
+  useEffect(() => {
+    if (dateFromUrl) {
+      const newDate = parseDateFromUrl(dateFromUrl);
+      if (!isNaN(newDate.getTime())) {
+        setCurrentDate(newDate);
+      }
     }
+  }, [dateFromUrl]);
+
+  // Calculate date range based on current view
+  const getDateRange = () => {
+    if (currentView === 'day') {
+      return {
+        startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate()),
+        endDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())
+      };
+    }
+    return {
+      startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+      endDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    };
   };
 
-  const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+  const { startDate, endDate } = getDateRange();
 
   const { data: events = [], error } = api.calendar.getByDateRange.useQuery({
     startDate,
@@ -85,21 +112,6 @@ export default function CalendarPage() {
     1
   ).getDay();
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const prevMonth = () => {
@@ -126,30 +138,6 @@ export default function CalendarPage() {
     setCurrentDate(new Date(currentDate.getTime() + 24 * 60 * 60 * 1000));
   };
 
-  const getEventsForDay = (day: Date) => {
-    return events.filter((event) => {
-      const eventDate = new Date(event.startTime);
-      return (
-        eventDate.getDate() === day.getDate() &&
-        eventDate.getMonth() === day.getMonth() &&
-        eventDate.getFullYear() === day.getFullYear()
-      );
-    });
-  };
-
-  const getWeekDays = (date: Date) => {
-    const day = date.getDay();
-    const diff = date.getDate() - day;
-    const weekStart = new Date(date.setDate(diff));
-    const weekDays = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      weekDays.push(d);
-    }
-    return weekDays;
-  };
-
   const isMonth = currentView === 'month';
   const isWeek = currentView === 'week';
   const isDay = currentView === 'day';
@@ -167,14 +155,28 @@ export default function CalendarPage() {
   };
 
   const formatDay = (date: Date) => {
-    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  };
+
+  const updateView = (newView: CalendarView) => {
+    if (newView === 'month') {
+      router.push('/dashboard/calendar');
+    } else if (newView === 'day') {
+      const year = currentDate.getFullYear();
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      router.push(`/dashboard/calendar/${newView}/${dateStr}`);
+    } else {
+      router.push(`/dashboard/calendar/${newView}`);
+    }
   };
 
   if (!hasMounted) return null;
 
   return (
     <div className={`transition-all duration-200 ease-out transform-gpu ${isCollapsed ? 'pl-20' : 'pl-72'}`}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto p-4 sm:p-6 lg:p-8">
         <Card className="p-6">
           {/* Calendar Header */}
           <div className="mb-4 flex items-center justify-between">
@@ -228,153 +230,47 @@ export default function CalendarPage() {
 
           {/* Calendar Grid */}
           {isMonth ? (
-            <div className="grid grid-cols-1 gap-6" style={{ contain: 'layout', willChange: 'transform' }}>
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 shadow-sm">
-                  <div className="grid grid-cols-7 border-b border-slate-200">
-                    {weekDays.map((day) => (
-                      <div
-                        key={day}
-                        className="border-r border-slate-200 p-2 text-center text-sm font-semibold text-slate-600 last:border-r-0"
-                      >
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7">
-                    {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-                      <div
-                        key={`empty-${index}`}
-                        className="min-h-[120px] border-b border-r border-slate-200 p-4 text-center last:border-r-0"
-                      />
-                    ))}
-                    {Array.from({ length: daysInMonth }).map((_, index) => {
-                      const dayNum = index + 1;
-                      const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
-                      const dayEvents = getEventsForDay(date);
-                      return (
-                        <div
-                          key={dayNum}
-                          className="min-h-[120px] border-b border-r border-slate-200 p-4 last:border-r-0 hover:bg-slate-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedDay(date);
-                            updateView('day');
-                          }}
-                        >
-                          <div className="font-semibold text-slate-900 mb-2">{dayNum}</div>
-                          <div className="space-y-1.5">
-                            {dayEvents.map((event) => (
-                              <div
-                                key={event.id}
-                                className={`rounded p-1.5 text-xs ${
-                                  event.isGoogleEvent
-                                    ? "bg-blue-50 text-blue-600"
-                                    : "bg-rose-50 text-rose-600"
-                                }`}
-                                title={`${event.description ?? ""}\n${
-                                  event.isGoogleEvent ? "(Google Calendar)" : "(Local Calendar)"
-                                }`}
-                              >
-                                {event.title}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : isDay ? (
-            <div className="grid grid-cols-1 gap-6" style={{ contain: 'layout', willChange: 'transform' }}>
-              {/* Day Events */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 shadow-sm p-6 min-h-[200px]">
-                  <h3 className="text-lg font-semibold mb-4">Events</h3>
-                  <div className="space-y-2">
-                    {getEventsForDay(selectedDay).length === 0 ? (
-                      <div className="text-slate-500">No events for this day.</div>
-                    ) : (
-                      getEventsForDay(selectedDay)
-                        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-                        .map((event) => (
-                          <div
-                            key={event.id}
-                            className={`rounded p-3 text-sm flex flex-col gap-1 border ${
-                              event.isGoogleEvent
-                                ? "bg-blue-50 text-blue-600 border-blue-200"
-                                : "bg-rose-50 text-rose-600 border-rose-200"
-                            }`}
-                          >
-                            <span className="font-semibold">{event.title}</span>
-                            <span className="text-xs">
-                              {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {event.endTime &&
-                                ` - ${new Date(event.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
-                            </span>
-                            {event.description && <span className="text-xs text-slate-500">{event.description}</span>}
-                            <span className="text-xs">
-                              {event.isGoogleEvent ? "(Google Calendar)" : "(Local Calendar)"}
-                            </span>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <MonthView
+              currentDate={currentDate}
+              events={events}
+              weekDays={weekDays}
+              firstDayOfMonth={firstDayOfMonth}
+              daysInMonth={daysInMonth}
+              onDayClick={(date) => {
+                // Create date string in YYYY-MM-DD format to avoid timezone issues
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+
+                setCurrentDate(date);
+                router.push(`/dashboard/calendar/day/${dateStr}`);
+              }}
+            />
+          ) : isWeek ? (
+            <WeekView
+              currentDate={currentDate}
+              events={events}
+              onDayClick={(date) => {
+                // Create date string in YYYY-MM-DD format to avoid timezone issues
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+
+                setCurrentDate(date);
+                router.push(`/dashboard/calendar/day/${dateStr}`);
+              }}
+            />
           ) : (
-            <div className="grid grid-cols-1 gap-6" style={{ contain: 'layout', willChange: 'transform' }}>
-              {/* Week Grid */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 shadow-sm">
-                  <div className="grid grid-cols-7 border-b border-slate-200">
-                    {getWeekDays(selectedDay).map((day) => (
-                      <div
-                        key={day.toISOString()}
-                        className="border-r border-slate-200 p-2 text-center text-sm font-semibold text-slate-600 last:border-r-0"
-                      >
-                        {day.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7">
-                    {getWeekDays(selectedDay).map((day) => {
-                      const dayEvents = getEventsForDay(day);
-                      return (
-                        <div
-                          key={day.toISOString()}
-                          className="min-h-[200px] border-b border-r border-slate-200 p-4 last:border-r-0 hover:bg-slate-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedDay(day);
-                            updateView('day');
-                          }}
-                        >
-                          <div className="space-y-1.5">
-                            {dayEvents.map((event) => (
-                              <div
-                                key={event.id}
-                                className={`rounded p-1.5 text-xs ${
-                                  event.isGoogleEvent
-                                    ? "bg-blue-50 text-blue-600"
-                                    : "bg-rose-50 text-rose-600"
-                                }`}
-                                title={`${event.description ?? ""}\n${
-                                  event.isGoogleEvent ? "(Google Calendar)" : "(Local Calendar)"
-                                }`}
-                              >
-                                {event.title}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DayView
+              currentDate={currentDate}
+              events={events}
+              onCreateEvent={() => {
+                // TODO: Implement create event functionality
+                console.log('Create event clicked');
+              }}
+            />
           )}
         </Card>
       </div>

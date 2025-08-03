@@ -1,15 +1,52 @@
-interface GoogleCalendarEvent {
+import type { GoogleCalendarEvent } from '~/entities';
+
+interface GoogleCalendarApiEvent {
   id: string;
   summary: string;
   description?: string;
   start: {
     dateTime: string;
-    timeZone: string;
+    timeZone?: string;
   };
   end: {
     dateTime: string;
-    timeZone: string;
+    timeZone?: string;
   };
+  status?: 'confirmed' | 'tentative' | 'cancelled';
+  location?: string;
+  attendees?: Array<{
+    email: string;
+    displayName?: string;
+    responseStatus: 'needsAction' | 'declined' | 'tentative' | 'accepted';
+    optional?: boolean;
+    organizer?: boolean;
+    self?: boolean;
+  }>;
+  creator?: {
+    email: string;
+    displayName?: string;
+    self?: boolean;
+  };
+  organizer?: {
+    email: string;
+    displayName?: string;
+    self?: boolean;
+  };
+  htmlLink?: string;
+  iCalUID?: string;
+  sequence?: number;
+  reminders?: {
+    useDefault: boolean;
+    overrides?: Array<{
+      method: 'email' | 'popup';
+      minutes: number;
+    }>;
+  };
+  visibility?: 'default' | 'public' | 'private' | 'confidential';
+}
+
+interface GoogleCalendarApiResponse {
+  items?: GoogleCalendarApiEvent[];
 }
 
 export async function fetchGoogleCalendarEvents(
@@ -41,19 +78,50 @@ export async function fetchGoogleCalendarEvents(
       if (response.status === 401) {
         throw new Error("Unauthorized: Token may be invalid or expired");
       }
-      throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`);
+
+      let errorMessage = `Google Calendar API error: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error?.message) {
+          errorMessage += ` - ${errorData.error.message}`;
+        }
+      } catch {
+        // If we can't parse the error response, just use the status
+      }
+
+      throw new Error(errorMessage);
     }
 
-    const data = await response.json();
-    return data.items?.map((event: any) => ({
+    const data: GoogleCalendarApiResponse = await response.json();
+    return data.items?.map((event: GoogleCalendarApiEvent): GoogleCalendarEvent => ({
       id: event.id,
       summary: event.summary,
       description: event.description,
-      start: event.start,
-      end: event.end,
+      start: {
+        dateTime: event.start.dateTime,
+        timeZone: event.start.timeZone || 'UTC',
+      },
+      end: {
+        dateTime: event.end.dateTime,
+        timeZone: event.end.timeZone || 'UTC',
+      },
+      status: event.status,
+      location: event.location,
+      attendees: event.attendees,
+      creator: event.creator,
+      organizer: event.organizer,
+      htmlLink: event.htmlLink,
+      iCalUID: event.iCalUID,
+      sequence: event.sequence,
+      reminders: event.reminders,
+      visibility: event.visibility,
     })) ?? [];
-  } catch {
-    throw new Error("Failed to fetch Google Calendar events");
+  } catch (error) {
+    // Preserve the original error message and type
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Failed to fetch Google Calendar events: ${String(error)}`);
   }
 }
 

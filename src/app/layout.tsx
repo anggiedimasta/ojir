@@ -4,6 +4,7 @@ import { TRPCReactProvider } from "~/trpc/react";
 import { AuthProvider } from "~/components/providers/auth-provider";
 import { Toaster } from "~/components/ui/toaster";
 import Script from "next/script";
+import { viewport } from "./viewport";
 
 import "~/styles/globals.css";
 
@@ -16,17 +17,10 @@ export const metadata: Metadata = {
   title: "Ojir - Your Digital Wallet",
   description: "Track expenses, manage events, and stay organized with smart insights and seamless collaboration.",
   manifest: "/manifest.json",
-  themeColor: "#000000",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Ojir",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
   icons: [
     { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
@@ -34,6 +28,8 @@ export const metadata: Metadata = {
     { rel: "mask-icon", url: "/icons/icon-192x192.png" }
   ],
 };
+
+export { viewport };
 
 export default function RootLayout({
   children,
