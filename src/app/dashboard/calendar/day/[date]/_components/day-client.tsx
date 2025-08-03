@@ -102,7 +102,6 @@ export default function DayClient({ date }: { date: string }) {
             currentDate={currentDate}
             events={events}
             onCreateEvent={() => {
-              console.log('Create event clicked')
             }}
           />
         </Card>

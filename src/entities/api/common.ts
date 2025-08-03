@@ -11,7 +11,7 @@ export interface ApiError {
   message: string;
   code: string;
   field?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 // tRPC specific error response structure

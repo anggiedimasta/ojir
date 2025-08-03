@@ -20,9 +20,7 @@ export const calendarRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const session = ctx.session;
 
-      console.log("Session user ID:", session.user.id);
-      console.log("Access token present:", !!session.accessToken);
-      console.log("Access token preview:", session.accessToken ? session.accessToken.substring(0, 20) + "..." : "none");
+
 
       try {
         // Get local events from database

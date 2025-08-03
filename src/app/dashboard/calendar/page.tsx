@@ -268,7 +268,6 @@ export default function CalendarPage() {
               events={events}
               onCreateEvent={() => {
                 // TODO: Implement create event functionality
-                console.log('Create event clicked');
               }}
             />
           )}

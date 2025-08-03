@@ -7,6 +7,10 @@ import {
   text,
   timestamp,
   varchar,
+  uuid,
+  decimal,
+  pgTable,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { type AdapterAccount } from "next-auth/adapters";
@@ -19,7 +23,8 @@ import { type AdapterAccount } from "next-auth/adapters";
  */
 export const createTable = pgTableCreator((name) => `ojir_${name}`);
 
-export const users = createTable("user", {
+// Auth tables (no prefix - NextAuth expects these exact names)
+export const authUsers = pgTable("user", {
   id: varchar("id", { length: 255 })
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -32,44 +37,34 @@ export const users = createTable("user", {
   image: varchar("image", { length: 255 }),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
-  accounts: many(accounts),
-  sessions: many(sessions),
-  calendarEvents: many(calendarEvents),
-}));
-
-export const accounts = createTable(
+export const authAccounts = pgTable(
   "account",
   {
     userId: varchar("user_id", { length: 255 })
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     type: varchar("type", { length: 255 })
       .$type<AdapterAccount["type"]>()
       .notNull(),
     provider: varchar("provider", { length: 255 }).notNull(),
     providerAccountId: varchar("provider_account_id", { length: 255 }).notNull(),
-    refreshToken: text("refresh_token"),
-    accessToken: text("access_token"),
-    expiresAt: integer("expires_at"),
-    tokenType: varchar("token_type", { length: 255 }),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: varchar("token_type", { length: 255 }),
     scope: varchar("scope", { length: 255 }),
-    idToken: text("id_token"),
-    sessionState: varchar("session_state", { length: 255 }),
+    id_token: text("id_token"),
+    session_state: varchar("session_state", { length: 255 }),
   },
   (account) => ({
     compoundKey: primaryKey({
       columns: [account.provider, account.providerAccountId],
     }),
-    userIdIdx: index("account_user_id_idx").on(account.userId),
+    userIdIdx: index("auth_account_user_id_idx").on(account.userId),
   })
 );
 
-export const accountsRelations = relations(accounts, ({ one }) => ({
-  user: one(users, { fields: [accounts.userId], references: [users.id] }),
-}));
-
-export const sessions = createTable(
+export const authSessions = pgTable(
   "session",
   {
     sessionToken: varchar("session_token", { length: 255 })
@@ -77,22 +72,18 @@ export const sessions = createTable(
       .primaryKey(),
     userId: varchar("user_id", { length: 255 })
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => authUsers.id, { onDelete: "cascade" }),
     expires: timestamp("expires", {
       mode: "date",
       withTimezone: true,
     }).notNull(),
   },
   (session) => ({
-    userIdIdx: index("session_user_id_idx").on(session.userId),
+    userIdIdx: index("auth_session_user_id_idx").on(session.userId),
   })
 );
 
-export const sessionsRelations = relations(sessions, ({ one }) => ({
-  user: one(users, { fields: [sessions.userId], references: [users.id] }),
-}));
-
-export const verificationTokens = createTable(
+export const authVerificationTokens = pgTable(
   "verification_token",
   {
     identifier: varchar("identifier", { length: 255 }).notNull(),
@@ -107,26 +98,214 @@ export const verificationTokens = createTable(
   })
 );
 
+
+
+// App tables (with ojir_ prefix)
+// Remove duplicate users table - we'll use NextAuth.js authUsers directly
+// export const users = createTable("user", {...}) - REMOVED
+
+// Update authUsers relations to include our app tables
 export const calendarEvents = createTable("calendar_event", {
-  id: varchar("id", { length: 255 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: varchar("id", { length: 255 })
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  startTime: timestamp("start_time", { withTimezone: true }).notNull(),
-  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+  startTime: timestamp("start_time", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
+  endTime: timestamp("end_time", {
+    mode: "date",
+    withTimezone: true,
+  }).notNull(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", {
+    mode: "date",
+    withTimezone: true,
+  }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp("updated_at", {
+    mode: "date",
+    withTimezone: true,
+  }),
+});
+
+export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
+  user: one(authUsers, { fields: [calendarEvents.userId], references: [authUsers.id] }),
+}));
+
+export const transactions = createTable(
+  "transaction",
+  {
+    id: varchar("id", { length: 255 })
+      .notNull()
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => authUsers.id),
+    walletId: varchar("wallet_id", { length: 255 })
+      .notNull()
+      .references(() => wallets.id, { onDelete: "cascade" }), // Required: transactions must belong to a wallet
+    recipient: varchar("recipient", { length: 255 }).notNull(),
+    location: varchar("location", { length: 255 }),
+    transactionDate: timestamp("transaction_date", {
+      mode: "date",
+      withTimezone: true,
+    }).notNull(),
+    amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 10 }).notNull().default("IDR"),
+    transactionRefNo: varchar("transaction_ref_no", { length: 255 }),
+    qrisRefNo: varchar("qris_ref_no", { length: 255 }),
+    merchantPan: varchar("merchant_pan", { length: 255 }),
+    customerPan: varchar("customer_pan", { length: 255 }),
+    acquirer: varchar("acquirer", { length: 255 }),
+    terminalId: varchar("terminal_id", { length: 255 }),
+    sourceOfFund: text("source_of_fund"),
+    sourceAccount: text("source_account"),
+    bankSender: varchar("bank_sender", { length: 255 }),
+    emailSubject: varchar("email_subject", { length: 500 }),
+    transactionType: varchar("transaction_type", { length: 100 }),
+    status: varchar("status", { length: 50 }),
+    direction: text("direction").notNull().default("out"),
+    virtualAccountNo: varchar("virtual_account_no", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (transaction) => ({
+    userIdIdx: index("user_id_idx").on(transaction.userId),
+    walletIdIdx: index("wallet_id_idx").on(transaction.walletId),
+    transactionDateIdx: index("transaction_date_idx").on(transaction.transactionDate),
+    transactionRefIdx: index("transaction_ref_idx").on(transaction.transactionRefNo),
+  })
+);
+
+
+
+// Master data tables for filtering options
+export const banks = createTable("bank", {
+  id: varchar("id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  code: varchar("code", { length: 50 }).notNull().unique(), // e.g., 'mandiri', 'bca'
+  name: varchar("name", { length: 255 }).notNull(), // e.g., 'Bank Mandiri', 'Bank BCA'
+  displayName: varchar("display_name", { length: 255 }).notNull(), // e.g., 'Bank Mandiri', 'Bank BCA'
+  iconPath: varchar("icon_path", { length: 500 }), // Path to bank icon
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
     () => new Date()
   ),
-},
-(table) => ({
-  userIdIdx: index("calendar_event_user_id_idx").on(table.userId),
+}, (bank) => ({
+  codeIdx: index("bank_code_idx").on(bank.code),
+  isActiveIdx: index("bank_is_active_idx").on(bank.isActive),
 }));
 
-export const calendarEventsRelations = relations(calendarEvents, ({ one }) => ({
-  user: one(users, { fields: [calendarEvents.userId], references: [users.id] }),
+// User wallets table
+export const wallets = createTable("wallet", {
+  id: varchar("id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(), // e.g., 'Mandiri Debit', 'BCA Savings'
+  type: varchar("type", { length: 50 }).notNull(), // e.g., 'debit', 'credit', 'savings'
+  bankCode: varchar("bank_code", { length: 50 }).notNull(), // References banks.code
+  accountNumber: varchar("account_number", { length: 255 }), // Masked account number
+  balance: decimal("balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  currency: varchar("currency", { length: 10 }).notNull().default("IDR"),
+  isActive: boolean("is_active").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false), // Only one default per user
+  color: varchar("color", { length: 20 }), // e.g., 'blue', 'green', 'red'
+  icon: varchar("icon", { length: 100 }), // e.g., 'credit-card', 'wallet', 'bank'
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+    () => new Date()
+  ),
+}, (wallet) => ({
+  userIdIdx: index("wallet_user_id_idx").on(wallet.userId),
+  bankCodeIdx: index("wallet_bank_code_idx").on(wallet.bankCode),
+  isActiveIdx: index("wallet_is_active_idx").on(wallet.isActive),
+  isDefaultIdx: index("wallet_is_default_idx").on(wallet.isDefault),
+}));
+
+export const paymentMethods = createTable("payment_method", {
+  id: varchar("id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  code: varchar("code", { length: 50 }).notNull().unique(), // e.g., 'qris', 'transfer'
+  name: varchar("name", { length: 255 }).notNull(), // e.g., 'QRIS', 'Bank Transfer'
+  displayName: varchar("display_name", { length: 255 }).notNull(), // e.g., 'QRIS', 'Bank Transfer'
+  description: text("description"), // Optional description
+  iconPath: varchar("icon_path", { length: 500 }), // Path to payment method icon
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+    () => new Date()
+  ),
+}, (paymentMethod) => ({
+  codeIdx: index("payment_method_code_idx").on(paymentMethod.code),
+  isActiveIdx: index("payment_method_is_active_idx").on(paymentMethod.isActive),
+}));
+
+// Relations - All relations defined after table definitions
+export const authUsersRelations = relations(authUsers, ({ many }) => ({
+  accounts: many(authAccounts),
+  sessions: many(authSessions),
+  calendarEvents: many(calendarEvents),
+  transactions: many(transactions),
+  wallets: many(wallets),
+}));
+
+export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
+  user: one(authUsers, { fields: [authAccounts.userId], references: [authUsers.id] }),
+}));
+
+export const authSessionsRelations = relations(authSessions, ({ one }) => ({
+  user: one(authUsers, { fields: [authSessions.userId], references: [authUsers.id] }),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [transactions.userId],
+    references: [authUsers.id],
+  }),
+  wallet: one(wallets, {
+    fields: [transactions.walletId],
+    references: [wallets.id],
+  }),
+}));
+
+export const walletsRelations = relations(wallets, ({ one, many }) => ({
+  user: one(authUsers, {
+    fields: [wallets.userId],
+    references: [authUsers.id],
+  }),
+  bank: one(banks, {
+    fields: [wallets.bankCode],
+    references: [banks.code],
+  }),
+  transactions: many(transactions),
+}));
+
+export const banksRelations = relations(banks, ({ many }) => ({
+  wallets: many(wallets),
 }));

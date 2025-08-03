@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 import { AuthProvider } from "~/components/providers/auth-provider";
 import { Toaster } from "~/components/ui/toaster";
+import { GlobalLoadingBar } from "~/components/ui/global-loading-bar";
 import Script from "next/script";
 import { viewport } from "./viewport";
 
@@ -48,6 +49,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#000000" />
       </head>
       <body className={`font-sans ${inter.variable} bg-[#0f0f0f] text-white antialiased`}>
+        <GlobalLoadingBar />
         <AuthProvider>
           <TRPCReactProvider>
             {children}
@@ -60,10 +62,8 @@ export default function RootLayout({
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(
                   function(registration) {
-                    console.log('ServiceWorker registration successful');
                   },
                   function(err) {
-                    console.log('ServiceWorker registration failed: ', err);
                   }
                 );
               });

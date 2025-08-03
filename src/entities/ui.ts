@@ -78,7 +78,7 @@ export interface FormField {
   label: string;
   type: FormFieldType;
   placeholder?: string;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean;
   required?: boolean;
   disabled?: boolean;
   options?: FormFieldOption[];
@@ -113,17 +113,17 @@ export interface FormFieldOption {
 }
 
 // Table and List UI Types
-export interface TableColumn<T = any> {
+export interface TableColumn<T = Record<string, unknown>> {
   key: keyof T | string;
   title: string;
   width?: number | string;
   sortable?: boolean;
   filterable?: boolean;
-  render?: (value: any, record: T, index: number) => React.ReactNode;
+  render?: (value: unknown, record: T, index: number) => React.ReactNode;
   align?: 'left' | 'center' | 'right';
 }
 
-export interface TableAction<T = any> {
+export interface TableAction<T = Record<string, unknown>> {
   key: string;
   label: string;
   icon?: React.ReactNode;
@@ -137,8 +137,8 @@ export interface FilterOption {
   key: string;
   label: string;
   type: 'text' | 'select' | 'date' | 'number' | 'boolean';
-  options?: { value: any; label: string }[];
-  defaultValue?: any;
+  options?: { value: string | number | boolean; label: string }[];
+  defaultValue?: string | number | boolean;
 }
 
 // Modal and Dialog UI Types

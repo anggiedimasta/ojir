@@ -22,6 +22,12 @@ export function Navbar({ user }: NavbarProps) {
           {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>
         <div className="w-64" /> {/* Spacer to match sidebar width */}
+
+        {/* Page Title and Description */}
+        <div className="ml-8">
+          <h1 className="text-xl font-semibold text-gray-900">Wallet</h1>
+          <p className="text-sm text-gray-500">Manage your transactions and financial data</p>
+        </div>
       </div>
       <div className="flex items-center justify-end">
         <UserDropdown

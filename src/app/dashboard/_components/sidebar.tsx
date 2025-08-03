@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, User, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { LayoutDashboard, Calendar, User, Settings, ChevronLeft, ChevronRight, Home, Wallet } from "lucide-react";
 import Image from "next/image";
 import { useSidebarStore } from "../../../store/sidebar-store";
 import { useEffect, useState } from 'react'
@@ -18,9 +18,10 @@ export function Sidebar() {
 
   const pathname = usePathname();
 
-  const menuItems = [
+  const navigationItems = [
     { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
     { href: "/dashboard/calendar", label: "Calendar", icon: <Calendar className="h-5 w-5" /> },
+    { href: "/dashboard/wallet", label: "Wallet", icon: <Wallet className="h-5 w-5" /> },
     { href: "/dashboard/profile", label: "Profile", icon: <User className="h-5 w-5" /> },
     { href: "/dashboard/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
   ];
@@ -66,7 +67,7 @@ export function Sidebar() {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <div className="space-y-2">
-              {menuItems.map((item) => (
+              {navigationItems.map((item) => (
                 <Button
                   key={item.href}
                   color="ghost"

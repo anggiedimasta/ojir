@@ -1,29 +1,80 @@
-# Create T3 App
+# OJIR - Personal Finance Tracker
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A comprehensive personal finance tracking application that syncs with Gmail to automatically import bank transaction emails.
 
-## What's next? How do I make an app with this?
+## Features
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+- **Email Integration**: Automatically syncs bank transaction emails from Gmail
+- **Transaction Parsing**: Intelligently parses transaction details from bank emails
+- **Advanced Filtering**: Filter transactions by date, bank, payment method, and more
+- **Master Data Management**: Database-driven bank and payment method management
+- **Real-time Updates**: Live transaction updates with server-side filtering and pagination
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Master Data Management
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+The application uses database-driven master data for banks and payment methods instead of hardcoded values. This provides:
 
-## Learn More
+- **Extensibility**: Add new banks and payment methods without code changes
+- **Consistency**: Centralized data management
+- **Performance**: Optimized database queries for filtering
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+### Master Data Setup
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+The master data (banks and payment methods) is automatically seeded when the database is set up. The application includes:
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+- **6 Banks**: Bank Mandiri, BCA, BNI, BRI, CIMB Niaga, and Other Banks
+- **5 Payment Methods**: QRIS, Bank Transfer, Virtual Account, BI-FAST, and Other Methods
 
-## How do I deploy this?
+### Adding New Banks/Payment Methods
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+New banks and payment methods can be added directly to the database:
+
+```sql
+-- Add a new bank
+INSERT INTO ojir_bank (id, code, name, display_name, icon_path, is_active, sort_order)
+VALUES (gen_random_uuid(), 'new-bank', 'New Bank Name', 'New Bank Display Name', '/icons/bank/new-bank.png', true, 10);
+
+-- Add a new payment method
+INSERT INTO ojir_payment_method (id, code, name, display_name, description, icon_path, is_active, sort_order)
+VALUES (gen_random_uuid(), 'new-method', 'New Method', 'New Method Display', 'Description', '/icons/payment/new-method.png', true, 10);
+```
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+ or Bun
+- PostgreSQL database
+- Google OAuth credentials
+
+### Setup
+
+1. **Clone the repository**
+2. **Install dependencies**: `bun install`
+3. **Set up environment variables** (see `.env.example`)
+4. **Run database migrations**: `npx drizzle-kit push`
+5. **Start development server**: `bun dev`
+
+### Database Schema
+
+The application uses Drizzle ORM with PostgreSQL. Key tables include:
+
+- `ojir_transaction`: Transaction records from bank emails
+- `ojir_bank`: Master data for banks
+- `ojir_payment_method`: Master data for payment methods
+- `user`: User accounts
+- `auth_*`: NextAuth.js authentication tables
+
+## Troubleshooting
+
+### Filter Components Not Working
+
+If the bank/payment method filters show "No banks available" or "No methods available":
+
+1. **Check database**: Verify the `ojir_bank` and `ojir_payment_method` tables exist and contain data
+2. **Refresh the page**: The filters should update automatically
+3. **Check authentication**: Ensure you're logged in (filters require authentication)
+
+## License
+
+MIT License - see LICENSE file for details.

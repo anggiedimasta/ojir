@@ -206,7 +206,6 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
           return
         } catch (error) {
           // If sharing is cancelled or fails, fall through to clipboard
-          console.log('Native sharing cancelled or failed:', error)
         }
       }
 
