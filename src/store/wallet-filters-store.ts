@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { DateFilterType, SortByType, SortOrderType, BankFilterType, PaymentMethodFilterType } from '~/entities/api/wallet'
+import type { DateFilterType, SortByType, SortOrderType, BankFilterValue, PaymentMethodFilterValue } from '~/entities/api/wallet'
 
 interface WalletFiltersStore {
   // Date filter state
@@ -20,10 +20,10 @@ interface WalletFiltersStore {
   setSortOrder: (order: SortOrderType) => void
 
   // New filter states
-  recipientBank: BankFilterType
-  setRecipientBank: (bank: BankFilterType) => void
-  paymentMethod: PaymentMethodFilterType
-  setPaymentMethod: (method: PaymentMethodFilterType) => void
+  recipientBank: BankFilterValue
+  setRecipientBank: (bank: BankFilterValue) => void
+  paymentMethod: PaymentMethodFilterValue
+  setPaymentMethod: (method: PaymentMethodFilterValue) => void
 
   // Pagination state
   currentPage: number
@@ -68,9 +68,9 @@ export const useWalletFiltersStore = create<WalletFiltersStore>()(
       setSortOrder: (sortOrder) => set({ sortOrder }),
 
       // New filter states
-      recipientBank: 'all',
+      recipientBank: ['all'],
       setRecipientBank: (recipientBank) => set({ recipientBank }),
-      paymentMethod: 'all',
+      paymentMethod: ['all'],
       setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
 
       // Pagination state
@@ -85,8 +85,8 @@ export const useWalletFiltersStore = create<WalletFiltersStore>()(
         customStartDate: defaultRange.startDate,
         customEndDate: defaultRange.endDate,
         searchQuery: '',
-        recipientBank: 'all',
-        paymentMethod: 'all',
+        recipientBank: ['all'],
+        paymentMethod: ['all'],
         sortBy: 'date',
         sortOrder: 'desc',
         currentPage: 0,
@@ -105,6 +105,17 @@ export const useWalletFiltersStore = create<WalletFiltersStore>()(
         sortOrder: state.sortOrder,
         pageSize: state.pageSize,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Migrate old single-value format to array format
+          if (state.recipientBank && !Array.isArray(state.recipientBank)) {
+            state.recipientBank = [state.recipientBank];
+          }
+          if (state.paymentMethod && !Array.isArray(state.paymentMethod)) {
+            state.paymentMethod = [state.paymentMethod];
+          }
+        }
+      },
     }
   )
 )

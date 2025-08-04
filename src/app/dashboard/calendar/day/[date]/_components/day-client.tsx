@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSidebarStore } from '~/store/sidebar-store'
+import { useSidebarStoreHydrated } from '~/store/sidebar-store'
 import { Button } from '~/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -11,7 +11,7 @@ import { api } from '~/trpc/react'
 import { DayView } from '../../../_components/day-view'
 
 export default function DayClient({ date }: { date: string }) {
-  const { isCollapsed } = useSidebarStore()
+  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated()
   const { toast } = useToast()
   const router = useRouter()
   const [currentDate, setCurrentDate] = useState<Date | null>(null)

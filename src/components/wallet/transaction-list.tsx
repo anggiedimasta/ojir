@@ -4,6 +4,7 @@ import { Download, Wallet, RefreshCw } from "lucide-react";
 import { TransactionItem } from "~/components/ui/transaction-item";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PaginationControls } from "~/components/ui/pagination-controls";
+import { TransactionListSkeleton } from "~/components/ui/transaction-skeleton";
 import type { TransactionListProps } from "~/entities/api/wallet";
 
 
@@ -16,33 +17,53 @@ export function TransactionList({
   onPageChange,
   isLoading,
   hasWallets = true,
+  selectedWalletIds = [],
+  wallets = [],
   formatCurrency,
   formatDate,
+  onEditTransaction,
 }: TransactionListProps) {
   const totalPages = Math.ceil((totalCount || 0) / pageSize);
 
+    // Generate dynamic title based on selected wallets
+  const getTransactionTitle = () => {
+    if (!selectedWalletIds || selectedWalletIds.length === 0) {
+      return "No Wallets Selected";
+    }
+
+    if (selectedWalletIds.length === wallets.length) {
+      return "All Wallet Transactions";
+    }
+
+    if (selectedWalletIds.length === 1) {
+      const wallet = wallets.find(w => w.id === selectedWalletIds[0]);
+      return `${wallet?.name || 'Wallet'} Transactions`;
+    }
+
+    return `${selectedWalletIds.length} Wallet Transactions`;
+  };
+
   return (
     <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-lg">
-      <div className="p-6 border-b border-slate-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-900">Recent Transactions</h2>
-          <Button className="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200">
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-        </div>
-      </div>
 
       {!transactions || transactions.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title={hasWallets ? "No transactions found" : "Create a wallet first"}
-          description={
-            hasWallets
-              ? "Auto sync is enabled. New bank transactions will be automatically imported when emails arrive."
-              : "You must create at least one wallet before syncing emails"
+          title={
+            !hasWallets
+              ? "Create a wallet first"
+              : selectedWalletIds.length === 0
+              ? "No wallets selected"
+              : "No transactions found"
           }
-          actionLabel={hasWallets ? undefined : "Create Wallet"}
+          description={
+            !hasWallets
+              ? "You must create at least one wallet before syncing emails"
+              : selectedWalletIds.length === 0
+              ? "Select one or more wallets to view their transactions"
+              : "Auto sync is enabled. New bank transactions will be automatically imported when emails arrive."
+          }
+          actionLabel={!hasWallets ? "Create Wallet" : selectedWalletIds.length === 0 ? "Select Wallets" : undefined}
           onAction={undefined}
           actionIcon={undefined}
           isLoading={isLoading}
@@ -56,6 +77,7 @@ export function TransactionList({
                 transaction={transaction}
                 formatCurrency={formatCurrency}
                 formatDate={formatDate}
+                onEdit={onEditTransaction}
               />
             ))}
           </div>

@@ -5,6 +5,7 @@ import { Icon } from "../atoms/icon";
 import { TransactionItem } from "./transaction-item";
 import { EmptyState } from "../molecules/empty-state";
 import { PaginationControls } from "./pagination-controls";
+import { TransactionListSkeleton } from "~/components/ui/transaction-skeleton";
 import type { TransactionResponse } from "~/entities/api/wallet";
 
 interface TransactionListProps {

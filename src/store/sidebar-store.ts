@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useState, useEffect } from 'react'
 
 interface SidebarStore {
   isCollapsed: boolean
@@ -7,10 +8,8 @@ interface SidebarStore {
 
 // Get initial state from localStorage
 const getInitialState = (): boolean => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('sidebar-collapsed')
-    return saved === 'true'
-  }
+  // Always start with expanded sidebar to avoid hydration mismatch
+  // The client will update this after hydration
   return false
 }
 
@@ -23,3 +22,20 @@ export const useSidebarStore = create<SidebarStore>((set) => ({
     set({ isCollapsed: collapsed })
   },
 }))
+
+// Custom hook to handle hydration properly
+export const useSidebarStoreHydrated = () => {
+  const { isCollapsed, setCollapsed } = useSidebarStore()
+  const [hasHydrated, setHasHydrated] = useState(false)
+
+  useEffect(() => {
+    // Sync with localStorage after hydration
+    const saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true' && !isCollapsed) {
+      setCollapsed(true)
+    }
+    setHasHydrated(true)
+  }, [isCollapsed, setCollapsed])
+
+  return { isCollapsed, setCollapsed, hasHydrated }
+}

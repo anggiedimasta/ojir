@@ -5,11 +5,11 @@ import { ChevronDown } from "lucide-react";
 import { Button } from "./button";
 import { PaymentMethodIcon } from "./payment-method-icon";
 import { api } from "~/trpc/react";
-import type { PaymentMethodFilterType } from "~/entities/api/wallet";
+import type { PaymentMethodFilterType, PaymentMethodFilterValue } from "~/entities/api/wallet";
 
 interface PaymentMethodFilterProps {
-  value: PaymentMethodFilterType;
-  onChange: (value: PaymentMethodFilterType) => void;
+  value: PaymentMethodFilterValue;
+  onChange: (value: PaymentMethodFilterValue) => void;
   className?: string;
 }
 
@@ -27,10 +27,25 @@ export function PaymentMethodFilter({ value, onChange, className = "" }: Payment
     })) || []),
   ];
 
-  const selectedMethod = paymentMethodOptions.find(option => option.value === value);
+  // Handle multiple selections
+  const isAllSelected = value.includes('all') || value.length === 0;
 
   const handleSelect = (selectedValue: PaymentMethodFilterType) => {
-    onChange(selectedValue);
+    if (selectedValue === 'all') {
+      onChange(['all']);
+    } else {
+      if (isAllSelected) {
+        // If "all" was selected, replace with just this value
+        onChange([selectedValue]);
+      } else {
+        // Toggle the selection
+        const newSelection = value.includes(selectedValue)
+          ? value.filter(method => method !== selectedValue)
+          : [...value, selectedValue];
+
+        onChange(newSelection.length === 0 ? ['all'] : newSelection);
+      }
+    }
     setIsOpen(false);
   };
 
@@ -39,14 +54,11 @@ export function PaymentMethodFilter({ value, onChange, className = "" }: Payment
       <div className={`relative ${className}`}>
         <Button
           color="gray"
-          className="w-full justify-between bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+          className="px-3 py-2 bg-white hover:bg-slate-50 border-slate-200 text-slate-700 rounded-lg transition-all duration-200"
           disabled
         >
-          <span className="flex items-center gap-2">
-            <PaymentMethodIcon methodName="loading" className="w-4 h-4" />
-            Loading methods...
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <PaymentMethodIcon methodName="loading" className="w-4 h-4" />
+          <ChevronDown className="w-4 h-4 opacity-50" />
         </Button>
       </div>
     );
@@ -58,14 +70,11 @@ export function PaymentMethodFilter({ value, onChange, className = "" }: Payment
       <div className={`relative ${className}`}>
         <Button
           color="gray"
-          className="w-full justify-between bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+          className="px-3 py-2 bg-white hover:bg-slate-50 border-slate-200 text-slate-700 rounded-lg transition-all duration-200"
           disabled
         >
-          <span className="flex items-center gap-2">
-            <PaymentMethodIcon methodName="no-methods" className="w-4 h-4" />
-            No methods available
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <PaymentMethodIcon methodName="no-methods" className="w-4 h-4" />
+          <ChevronDown className="w-4 h-4 opacity-50" />
         </Button>
       </div>
     );
@@ -73,43 +82,53 @@ export function PaymentMethodFilter({ value, onChange, className = "" }: Payment
 
   return (
     <div className={`relative ${className}`}>
-      <Button
-        color="gray"
-        className="w-full justify-between bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <span className="flex items-center gap-2">
-          {selectedMethod?.icon ? (
-            <PaymentMethodIcon methodName={selectedMethod.icon} className="w-4 h-4" />
-          ) : (
-            <PaymentMethodIcon methodName="all" className="w-4 h-4" />
-          )}
-          {selectedMethod?.label || 'All Methods'}
-        </span>
-        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </Button>
+             <Button
+         color="gray"
+         className="px-3 py-2 bg-white hover:bg-slate-50 border-slate-200 text-slate-700 rounded-lg transition-all duration-200"
+         onClick={() => setIsOpen(!isOpen)}
+         title={isAllSelected ? 'All Methods' : `${value.length} method${value.length !== 1 ? 's' : ''} selected`}
+       >
+         {isAllSelected ? (
+           <PaymentMethodIcon methodName="all" className="w-4 h-4" />
+         ) : value.length === 1 ? (
+           <PaymentMethodIcon methodName={paymentMethodOptions.find(opt => opt.value === value[0])?.icon || 'all'} className="w-4 h-4" />
+         ) : (
+           <PaymentMethodIcon methodName="multiple" className="w-4 h-4" />
+         )}
+         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+       </Button>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          {paymentMethodOptions.map((option) => (
-            <button
-              key={option.value}
-              className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 ${
-                option.value === value ? 'bg-blue-50 text-blue-600' : 'text-slate-700'
-              }`}
-              onClick={() => handleSelect(option.value)}
-            >
-              {option.icon ? (
-                <PaymentMethodIcon methodName={option.icon} className="w-4 h-4" />
-              ) : (
-                <PaymentMethodIcon methodName="all" className="w-4 h-4" />
-              )}
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+             {/* Dropdown Menu */}
+       {isOpen && (
+         <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg z-50 min-w-[200px] w-max max-h-60 overflow-y-auto">
+           {paymentMethodOptions.map((option) => {
+             const isSelected = value.includes(option.value);
+             return (
+               <button
+                 key={option.value}
+                 className={`w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-xs ${
+                   isSelected ? 'bg-blue-50 text-blue-600' : 'text-slate-700'
+                 }`}
+                 onClick={() => handleSelect(option.value)}
+               >
+                 <div className={`w-3 h-3 border rounded ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-slate-300'}`}>
+                   {isSelected && (
+                     <svg className="w-2 h-2 text-white mx-auto mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                     </svg>
+                   )}
+                 </div>
+                 {option.icon ? (
+                   <PaymentMethodIcon methodName={option.icon} className="w-3 h-3" />
+                 ) : (
+                   <PaymentMethodIcon methodName="all" className="w-3 h-3" />
+                 )}
+                 <span>{option.label}</span>
+               </button>
+             );
+           })}
+         </div>
+       )}
 
       {/* Backdrop to close dropdown when clicking outside */}
       {isOpen && (

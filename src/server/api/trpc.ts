@@ -10,9 +10,11 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { eq, and } from "drizzle-orm";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { authAccounts } from "~/server/db/schema";
 
 /**
  * 1. CONTEXT
@@ -29,10 +31,79 @@ import { db } from "~/server/db";
 export const createTRPCContext = async (opts: { headers: Headers }) => {
   const session = await auth();
 
+  // If we have a session, check and refresh the access token if needed
+  let accessToken = session?.accessToken;
+  if (session?.user?.id) {
+    try {
+      // Get the account from database
+      const account = await db.query.authAccounts.findFirst({
+        where: (authAccounts, { eq, and }) =>
+          and(
+            eq(authAccounts.userId, session.user.id),
+            eq(authAccounts.provider, "google")
+          )
+      });
+
+            if (account?.refresh_token) {
+        const isExpired = account.expires_at ? Date.now() >= (account.expires_at * 1000 - 5 * 60 * 1000) : true;
+
+        // Refresh if expired or if no access token
+        if (isExpired || !accessToken) {
+          // Try to refresh the token
+          const response = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              client_id: process.env.AUTH_GOOGLE_ID!,
+              client_secret: process.env.AUTH_GOOGLE_SECRET!,
+              grant_type: "refresh_token",
+              refresh_token: account.refresh_token,
+              scope: [
+                "openid",
+                "email",
+                "profile",
+                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/gmail.readonly"
+              ].join(" ")
+            }),
+          });
+
+          if (response.ok) {
+            const tokens = await response.json();
+
+            // Update the database with new tokens
+            await db
+              .update(authAccounts)
+              .set({
+                access_token: tokens.access_token,
+                refresh_token: tokens.refresh_token || account.refresh_token,
+                expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
+                scope: tokens.scope || account.scope
+              })
+              .where(
+                and(
+                  eq(authAccounts.userId, session.user.id),
+                  eq(authAccounts.provider, "google")
+                )
+              );
+
+            accessToken = tokens.access_token;
+          }
+        } else if (account.access_token) {
+          accessToken = account.access_token;
+        }
+      }
+    } catch (error) {
+      console.error("Token refresh in TRPC context failed:", error);
+    }
+  }
+
   return {
     db,
     session,
-    accessToken: session?.accessToken,
+    accessToken,
     ...opts,
   };
 };

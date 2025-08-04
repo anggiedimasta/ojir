@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { BankIcon } from "~/components/ui/bank-icon";
+import { ColorPicker } from "~/components/ui/color-picker";
 import type { CreateWalletInput, UpdateWalletInput, Bank, Wallet } from "~/entities/api/wallet";
 
 interface WalletFormProps {
@@ -35,6 +36,7 @@ export function WalletForm({ wallet, banks, onSubmit, onCancel, isLoading, onRen
     balance: wallet?.balance ? parseFloat(wallet.balance) : 0,
     currency: wallet?.currency || 'IDR',
     isDefault: wallet?.isDefault || false,
+    color: wallet?.color || 'google-blue',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -150,7 +152,11 @@ export function WalletForm({ wallet, banks, onSubmit, onCancel, isLoading, onRen
           />
         </div>
 
-
+        {/* Wallet Color */}
+        <ColorPicker
+          selectedColor={formData.color}
+          onColorChange={(color) => setFormData({ ...formData, color })}
+        />
 
         {/* Default Wallet */}
         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">

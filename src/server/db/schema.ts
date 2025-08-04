@@ -111,11 +111,11 @@ export const calendarEvents = createTable("calendar_event", {
     .$defaultFn(() => crypto.randomUUID()),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  startTime: timestamp("start_time", {
+  startTime: timestamp("start_date", {
     mode: "date",
     withTimezone: true,
   }).notNull(),
-  endTime: timestamp("end_time", {
+  endTime: timestamp("end_date", {
     mode: "date",
     withTimezone: true,
   }).notNull(),
@@ -156,6 +156,8 @@ export const transactions = createTable(
       withTimezone: true,
     }).notNull(),
     amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+    fee: decimal("fee", { precision: 15, scale: 2 }).notNull().default("0.00"),
+    totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull().default("0.00"),
     currency: varchar("currency", { length: 10 }).notNull().default("IDR"),
     transactionRefNo: varchar("transaction_ref_no", { length: 255 }),
     qrisRefNo: varchar("qris_ref_no", { length: 255 }),
@@ -165,6 +167,9 @@ export const transactions = createTable(
     terminalId: varchar("terminal_id", { length: 255 }),
     sourceOfFund: text("source_of_fund"),
     sourceAccount: text("source_account"),
+    recipientBank: varchar("recipient_bank", { length: 255 }),
+    recipientBankAccount: varchar("recipient_bank_account", { length: 255 }),
+    transferPurpose: varchar("transfer_purpose", { length: 255 }),
     bankSender: varchar("bank_sender", { length: 255 }),
     emailSubject: varchar("email_subject", { length: 500 }),
     transactionType: varchar("transaction_type", { length: 100 }),
@@ -183,6 +188,10 @@ export const transactions = createTable(
     walletIdIdx: index("wallet_id_idx").on(transaction.walletId),
     transactionDateIdx: index("transaction_date_idx").on(transaction.transactionDate),
     transactionRefIdx: index("transaction_ref_idx").on(transaction.transactionRefNo),
+    feeIdx: index("transaction_fee_idx").on(transaction.fee),
+    totalAmountIdx: index("transaction_total_amount_idx").on(transaction.totalAmount),
+    recipientBankIdx: index("transaction_recipient_bank_idx").on(transaction.recipientBank),
+    transferPurposeIdx: index("transaction_transfer_purpose_idx").on(transaction.transferPurpose),
   })
 );
 

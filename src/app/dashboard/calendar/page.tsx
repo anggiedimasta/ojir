@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "~/trpc/react";
-import { useSidebarStore } from "~/store/sidebar-store";
+import { useSidebarStoreHydrated } from "~/store/sidebar-store";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
@@ -14,7 +14,7 @@ import { DayView } from "./_components/day-view";
 import { type CalendarView } from "~/app/dashboard/calendar/_components/types";
 
 export default function CalendarPage() {
-  const { isCollapsed } = useSidebarStore();
+  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -172,7 +172,7 @@ export default function CalendarPage() {
     }
   };
 
-  if (!hasMounted) return null;
+  if (!hasMounted || !hasHydrated) return null;
 
   return (
     <div className={`transition-all duration-200 ease-out transform-gpu ${isCollapsed ? 'pl-20' : 'pl-72'}`}>

@@ -1,5 +1,13 @@
 import { google } from 'googleapis';
-import type { GmailMessage, ParsedTransaction } from '~/entities/api/wallet';
+import type { GmailMessage, ParsedTransaction, EmailTransactionData } from '~/entities/api/wallet';
+
+// Custom error class for auth errors that should trigger sign-out
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
 
 interface GmailApiResponse {
   messages?: Array<{ id: string; threadId: string }>;
@@ -29,8 +37,8 @@ export async function fetchGmailMessages(
       auth: oauth2Client,
     });
 
-    // Default query to find bank transaction emails
-    const defaultQuery = 'from:(noreply.livin@bankmandiri.co.id OR noreply@bca.co.id OR noreply@bri.co.id) subject:(payment OR transfer OR transaction)';
+    // Enhanced query to include top-up transactions
+    const defaultQuery = 'from:(noreply.livin@bankmandiri.co.id OR noreply@bca.co.id OR noreply@bri.co.id) subject:(payment OR transfer OR transaction OR "top-up" OR "topup")';
     const query = options.query || defaultQuery;
 
     // List messages
@@ -60,7 +68,6 @@ export async function fetchGmailMessages(
 
         messages.push(messageResponse.data as GmailMessage);
       } catch (error) {
-
         // Continue with other messages
       }
     }
@@ -70,15 +77,30 @@ export async function fetchGmailMessages(
       nextPageToken: messageList.nextPageToken,
     };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    throw new Error(`Failed to fetch Gmail messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            // Check for specific OAuth errors
+    if (errorMessage.includes('invalid_grant')) {
+      // This usually means the refresh token is invalid/revoked
+      throw new AuthError('Gmail access has been revoked. Please sign out and sign in again to re-authorize Gmail access.');
+    }
+
+    if (errorMessage.includes('Invalid Credentials')) {
+      // This might be a temporary issue, try to refresh first
+      throw new AuthError('Gmail access token has expired. Please sign out and sign in again to refresh your credentials.');
+    }
+
+    if (errorMessage.includes('insufficient_permissions') || errorMessage.includes('access_denied')) {
+      throw new AuthError('Gmail access has been revoked. Please sign out and sign in again to re-authorize Gmail access.');
+    }
+
+    throw new Error(`Failed to fetch Gmail messages: ${errorMessage}`);
   }
 }
 
-export function parseBankMandiriEmailFromHtml(htmlContent: string): ParsedTransaction | null {
-  try {
-    // Decode quoted-printable encoding first
-    let decodedHtml = htmlContent
+// Helper function to decode quoted-printable HTML content
+function decodeQuotedPrintable(htmlContent: string): string {
+  return htmlContent
       .replace(/=3D/g, '=')
       .replace(/=\r?\n/g, '') // Remove soft line breaks
       .replace(/=[0-9A-F]{2}/g, (match) => {
@@ -86,317 +108,567 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string): ParsedTransa
         const hex = match.substring(1);
         return String.fromCharCode(parseInt(hex, 16));
       });
+}
 
+// Helper function to parse Indonesian Rupiah format
+function parseIndonesianRupiah(amountStr: string): number {
+  if (!amountStr) return 0;
 
+  // Check if amount is negative
+  const isNegative = amountStr.startsWith('-');
+  const cleanAmount = isNegative ? amountStr.substring(1) : amountStr;
 
-    // Use decoded HTML for pattern matching
-    htmlContent = decodedHtml;
+  // Handle Indonesian format: periods are thousand separators, comma is decimal separator
+  let result = 0;
+  if (cleanAmount.includes(',')) {
+    // Split by comma to separate integer and decimal parts
+    const parts = cleanAmount.split(',');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+    if (integerPart) {
+      // Remove periods (thousand separators) from integer part
+      const cleanInteger = integerPart.replace(/\./g, '');
+      // Combine as decimal number
+      result = parseFloat(`${cleanInteger}.${decimalPart || '00'}`);
+    }
+  } else {
+    // No comma, just remove periods and treat as integer
+    result = parseFloat(cleanAmount.replace(/\./g, ''));
+  }
 
+  // Return absolute value (sign is handled by direction field)
+  return Math.abs(result);
+}
 
+// Helper function to parse date and time from Bank Mandiri format
+function parseBankMandiriDateTime(dateStr: string, timeStr: string): Date {
+  if (!dateStr || !timeStr) return new Date();
 
-    // Check if this is a QR transfer email vs BI Fast transfer vs merchant payment
-    const isQRTransfer = htmlContent.includes('QR Transfer Successful') || htmlContent.includes('QR transfer details');
-    const isBIFastTransfer = htmlContent.includes('BI Fast Transfer Successful') || htmlContent.includes('BI Fast Ref. No.');
+  try {
+    // Convert "27 Jul 2025" and "09:25:57 WIB" to Date
+    const dateTimeStr = `${dateStr} ${timeStr.replace(' WIB', '+07:00')}`;
+    const parsedDate = new Date(dateTimeStr);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate;
+    }
+  } catch (error) {
+    // Fallback to current date if parsing fails
+  }
 
-    let recipient = '';
-    let location = '';
-    let transactionType = 'payment';
-    let acquirer = '';
+  return new Date();
+}
 
-    if (isBIFastTransfer) {
+// Enhanced parser for Bank Mandiri top-up emails
+function parseBankMandiriTopUpEmail(htmlContent: string, actualSender?: string): EmailTransactionData | null {
+  try {
+    // Decode HTML content
+    const decodedHtml = decodeQuotedPrintable(htmlContent);
 
+    // Check if this is a top-up email
+    const isTopUp = decodedHtml.includes('Top-up Successful') ||
+                   decodedHtml.includes('Service Provider') ||
+                   decodedHtml.includes('PLN Prabayar');
 
-      // For BI Fast transfers, extract recipient person's name and their bank
-      const recipientMatch = htmlContent.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>([^<]+)<\/p>/is);
+    if (!isTopUp) {
+      return null;
+    }
 
-      if (recipientMatch) {
-              recipient = recipientMatch[1]?.trim() || ''; // Person's name
-      const recipientBank = recipientMatch[2]?.trim() || ''; // Bank name (e.g., "Bank Rakyat Indonesia - 039601005387539")
+    // Extract service provider and account number
+    const serviceProviderMatch = decodedHtml.match(/<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>\*{4}(\d+)<\/p>/is);
+    const serviceProvider = serviceProviderMatch?.[1]?.trim() || '';
+    const accountNumber = serviceProviderMatch?.[2]?.trim() || '';
 
-              // Extract bank name from the full string
-        const bankMatch = recipientBank.match(/Bank\s+([^-]+)/i);
+    // Extract date and time
+    const dateMatch = decodedHtml.match(/<td[^>]*>Date<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const timeMatch = decodedHtml.match(/<td[^>]*>Time<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const dateStr = dateMatch?.[1]?.trim();
+    const timeStr = timeMatch?.[1]?.trim();
+
+    // Extract amounts
+    const topUpAmountMatch = decodedHtml.match(/<td[^>]*>Top-up Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const transactionFeeMatch = decodedHtml.match(/<td[^>]*>Transaction Fee<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const totalAmountMatch = decodedHtml.match(/<td[^>]*>Total<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+
+    const topUpAmount = parseIndonesianRupiah(topUpAmountMatch?.[1]?.trim() || '0');
+    const transactionFee = parseIndonesianRupiah(transactionFeeMatch?.[1]?.trim() || '0');
+    const totalAmount = parseIndonesianRupiah(totalAmountMatch?.[1]?.trim() || '0');
+
+    // Extract reference number
+    const refMatch = decodedHtml.match(/<td[^>]*>Reference No\.?<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
+
+    // Extract source of fund
+    const sourceMatch = decodedHtml.match(/<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>\*{4}(\d+)<\/p>/is);
+    const sourceOfFund = sourceMatch?.[1]?.trim() || '';
+    const sourceAccount = sourceMatch?.[2]?.trim() || '';
+
+    // Validate required fields
+    if (!serviceProvider || !totalAmount || totalAmount <= 0) {
+      return null;
+    }
+
+    return {
+      recipient: serviceProvider,
+      location: '',
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
+      amount: totalAmount,
+      fee: 0, // No fee for top-ups
+      totalAmount: totalAmount,
+      currency: 'IDR',
+      transactionRefNo,
+      sourceOfFund,
+      sourceAccount: sourceAccount || '',
+      recipientBank: '',
+      recipientBankAccount: '',
+      transferPurpose: '',
+      bankSender: actualSender || '',
+      emailSubject: '',
+      transactionType: '',
+      status: '',
+      direction: 'out',
+      serviceProvider,
+      accountNumber: accountNumber || '',
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Enhanced parser for Bank Mandiri transfer emails
+function parseBankMandiriTransferEmail(htmlContent: string, actualSender?: string): EmailTransactionData | null {
+  try {
+    const decodedHtml = decodeQuotedPrintable(htmlContent);
+
+    // Check if this is a transfer email
+    const isQRTransfer = decodedHtml.includes('QR Transfer Successful') || decodedHtml.includes('QR transfer details');
+    const isBIFastTransfer = decodedHtml.includes('BI Fast Transfer Successful') || decodedHtml.includes('BI Fast Ref. No.');
+
+    if (!isQRTransfer && !isBIFastTransfer) {
+      return null;
+    }
+
+    // Extract recipient information
+    const recipientMatch = decodedHtml.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>([^<]+)<\/p>/is);
+    const recipient = recipientMatch?.[1]?.trim() || '';
+    const recipientBankFull = recipientMatch?.[2]?.trim() || '';
+
+    // Extract recipient bank and account number
+    let recipientBank = '';
+    let recipientBankAccount = '';
+    if (recipientBankFull) {
+      const bankAccountMatch = recipientBankFull.match(/Bank\s+([^-]+)\s*-\s*(\d+)/i);
+      if (bankAccountMatch) {
+        const bankName = bankAccountMatch[1].trim()
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        recipientBank = bankName === 'Central Asia' ? 'BCA' : `Bank ${bankName}`;
+        recipientBankAccount = bankAccountMatch[2].trim();
+      } else {
+        // Fallback: try to extract just bank name
+        const bankMatch = recipientBankFull.match(/Bank\s+([^-]+)/i);
         if (bankMatch && bankMatch[1]) {
-          // Clean up HTML entities and extra whitespace
           const cleanBankName = bankMatch[1].trim()
             .replace(/&nbsp;/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
-          location = `Bank ${cleanBankName}`; // e.g., "Bank Rakyat Indonesia"
-        } else {
-          // Clean up HTML entities and extra whitespace
-          const cleanBankName = (recipientBank || '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          location = cleanBankName;
+          recipientBank = cleanBankName === 'Central Asia' ? 'BCA' : `Bank ${cleanBankName}`;
         }
       }
-
-      transactionType = 'transfer';
-
-
-    } else if (isQRTransfer) {
-
-
-      // For QR transfers, extract recipient person's name and their bank
-      const recipientMatch = htmlContent.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>([^<]+)<\/p>/is);
-
-      if (recipientMatch) {
-        recipient = recipientMatch[1]?.trim() || ''; // Person's name
-        const recipientBank = recipientMatch[2]?.trim() || ''; // Bank name (e.g., "Bank BCA")
-
-        // For transfers, the bank is not an acquirer but the recipient's bank
-        // We can show this in the location field or create a specific field
-        location = recipientBank;
-      }
-
-      transactionType = 'transfer';
-
-
-    } else {
-
-
-      // Extract recipient using HTML structure - look for h4 after "Recipient"
-      // More flexible patterns to handle different HTML formatting
-      const recipientMatch = htmlContent.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>/is) ||
-                            htmlContent.match(/Recipient<\/p>\s*<h4[^>]*>([^<]+)<\/h4>/is) ||
-                            htmlContent.match(/Recipient[^<]*<h4[^>]*>([^<]+)<\/h4>/is) ||
-                            htmlContent.match(/<h4[^>]*style[^>]*text-align:left[^>]*>([^<]+)<\/h4>/is);
-      recipient = recipientMatch?.[1]?.trim() || '';
-
-      // Extract location - look for p tag that contains "JAKARTA" and "ID"
-      const locationMatch = htmlContent.match(/<p[^>]*>([^<]*JAKARTA[^<]*-[^<]*ID[^<]*)<\/p>/is) ||
-                           htmlContent.match(/>(JAKARTA[^<]*-[^<]*ID[^<]*)</is);
-      location = locationMatch?.[1]?.trim() || '';
-
-      // Extract acquirer for merchant payments
-      const acquirerMatch = htmlContent.match(/<td[^>]*>Acquirer<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
-      const rawAcquirer = acquirerMatch?.[1]?.trim() || '';
-      // Clean up HTML entities and extra whitespace
-      acquirer = rawAcquirer
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
     }
 
-    // Extract date - more flexible pattern
-    const dateMatch = htmlContent.match(/<td[^>]*>Date<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                     htmlContent.match(/Date<\/td>[^<]*<td[^>]*>([^<]+)<\/td>/is) ||
-                     htmlContent.match(/Date[^<]*>([^<]*\d{1,2}\s+\w+\s+\d{4}[^<]*)</is);
+    // Extract date and time
+    const dateMatch = decodedHtml.match(/<td[^>]*>Date<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const timeMatch = decodedHtml.match(/<td[^>]*>Time<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
     const dateStr = dateMatch?.[1]?.trim();
-
-    // Extract time - more flexible pattern
-    const timeMatch = htmlContent.match(/<td[^>]*>Time<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                     htmlContent.match(/Time<\/td>[^<]*<td[^>]*>([^<]+)<\/td>/is) ||
-                     htmlContent.match(/Time[^<]*>([^<]*\d{2}:\d{2}:\d{2}[^<]*WIB[^<]*)</is);
     const timeStr = timeMatch?.[1]?.trim();
 
-    // Extract amount - handle both "Amount" and "Total Transaction" for transfers
-    let amountMatch;
-    let rawAmountStr = '';
+    // Extract amounts - separate transfer amount, fee, and total
+    const transferAmountMatch = decodedHtml.match(/<td[^>]*>Transfer\s*Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const feeMatch = decodedHtml.match(/<td[^>]*>Transfer\s*Fee<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const totalTransactionMatch = decodedHtml.match(/<td[^>]*>Total\s*Transaction<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
 
-    if (isQRTransfer || isBIFastTransfer) {
-      // For QR transfers and BI Fast transfers, use "Total Transaction" as the final amount (includes fees)
-      amountMatch = htmlContent.match(/<td[^>]*>Total\s*Transaction<\/td>\s*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is) ||
-                   htmlContent.match(/Total\s*Transaction<\/td>[^<]*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is);
+    const amount = parseIndonesianRupiah(transferAmountMatch?.[1] ? transferAmountMatch[1].trim() : '0');
+    const fee = parseIndonesianRupiah(feeMatch?.[1] ? feeMatch[1].trim() : '0');
+    const totalAmount = parseIndonesianRupiah(totalTransactionMatch?.[1] ? totalTransactionMatch[1].trim() : '0');
 
-      // If not found, fallback to regular amount
-      if (!amountMatch) {
-        amountMatch = htmlContent.match(/<td[^>]*>Amount<\/td>\s*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is) ||
-                     htmlContent.match(/Amount<\/td>[^<]*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is) ||
-                     htmlContent.match(/Transfer\s*Amount<\/td>[^<]*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is);
-      }
-    } else {
-      // For merchant payments, use regular "Transaction Amount"
-      amountMatch = htmlContent.match(/<td[^>]*>Transaction\s*Amount<\/td>\s*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is) ||
-                   htmlContent.match(/Transaction\s*Amount<\/td>[^<]*<td[^>]*>(?:Rp|IDR)\s*([\d,.]+)<\/td>/is) ||
-                   htmlContent.match(/Amount[^<]*>(?:Rp|IDR)\s*([\d,.]+)</is) ||
-                   htmlContent.match(/(?:Rp|IDR)\s*([\d,.]+)/is);
-    }
+    // Extract transfer purpose
+    const purposeMatch = decodedHtml.match(/<td[^>]*>Transfer\s*Purpose<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const transferPurpose = purposeMatch?.[1]?.trim() || '';
 
-    rawAmountStr = amountMatch?.[1]?.trim() || '';
+    // Extract reference number
+    const refMatch = decodedHtml.match(/<td[^>]*>Reference\s*No\.?<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
+                    decodedHtml.match(/<td[^>]*>BI\s*Fast\s*Ref\.?\s*No\.?<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
 
-    // Extract transaction ref - more flexible
-    const transactionRefMatch = htmlContent.match(/Transaction\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                               htmlContent.match(/Transaction\s*Ref[^<]*No[^<]*>([^<]*\d{10,}[^<]*)</is) ||
-                               htmlContent.match(/Reference\s*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                               htmlContent.match(/Reference\s*No[^<]*>([^<]*\d{10,}[^<]*)</is) ||
-                               htmlContent.match(/BI\s*Fast\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                               htmlContent.match(/BI\s*Fast\s*Ref[^<]*No[^<]*>([^<]*\d{10,}[^<]*)</is);
-    const transactionRefNo = transactionRefMatch?.[1]?.trim();
+    // Extract source of fund
+    const sourceMatch = decodedHtml.match(/<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>\*{4}(\d+)<\/p>/is);
+    const sourceOfFund = sourceMatch?.[1]?.trim() || '';
+    const sourceAccount = sourceMatch?.[2]?.trim() || '';
 
-    // Extract virtual account number from recipient area (only for merchant payments)
-    let virtualAccountNo = '';
-    if (!isQRTransfer && recipient) {
-      // Look for numeric string after recipient name (common in virtual account emails)
-      const vaMatch = htmlContent.match(new RegExp(`<h4[^>]*>${recipient.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\/h4>\\s*<div[^>]*>([0-9]{10,})<\/div>`, 'is'));
-      virtualAccountNo = vaMatch?.[1]?.trim() || '';
-    }
-
-    // Extract QRIS ref (only for merchant payments)
-    let qrisRefNo = '';
-    if (!isQRTransfer) {
-      const qrisRefMatch = htmlContent.match(/QRIS\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                          htmlContent.match(/QRIS\s*Ref[^<]*No[^<]*>([^<]*\d{10,}[^<]*)</is);
-      qrisRefNo = qrisRefMatch?.[1]?.trim() || '';
-    }
-
-    // Extract merchant PAN (only for merchant payments)
-    const merchantPanMatch = !isQRTransfer ? htmlContent.match(/<td[^>]*>Merchant PAN<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) : null;
-    const merchantPan = merchantPanMatch?.[1]?.trim() || '';
-
-    // Extract customer PAN (only for merchant payments)
-    const customerPanMatch = !isQRTransfer ? htmlContent.match(/<td[^>]*>Customer PAN<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) : null;
-    const customerPan = customerPanMatch?.[1]?.trim() || '';
-
-    // Extract terminal ID (only for merchant payments)
-    const terminalIdMatch = !isQRTransfer ? htmlContent.match(/<td[^>]*>Terminal ID<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) : null;
-    const terminalId = terminalIdMatch?.[1]?.trim() || '';
-
-    // Extract source of fund info
-    const sourceOfFundMatch = htmlContent.match(/<p[^>]*>Source of Fund<\/p>\s*<h4[^>]*>([^<]+)<\/h4>\s*<p[^>]*>([^<]+)<\/p>/is);
-    const sourceOfFund = sourceOfFundMatch?.[1]?.trim() || '';
-    const sourceAccount = sourceOfFundMatch?.[2]?.trim() || '';
-
-
-
-    if (!recipient || !rawAmountStr) {
-      const missingFields = [];
-      if (!recipient) missingFields.push('recipient');
-      if (!rawAmountStr) missingFields.push('amount');
-
+    // Validate required fields
+    if (!recipient || !amount || amount <= 0) {
       return null;
     }
 
-    // For QR transfers, don't do bank name processing since recipient is a person
-    let actualRecipient = recipient;
-    let actualAcquirer = acquirer;
+    return {
+      recipient,
+      location: '', // No location for transfers
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
+      amount,
+      fee,
+      totalAmount,
+      currency: 'IDR',
+      transactionRefNo,
+      sourceOfFund,
+      sourceAccount: sourceAccount || '',
+      recipientBank,
+      recipientBankAccount,
+      transferPurpose,
+      bankSender: actualSender || '',
+      emailSubject: '',
+      transactionType: '',
+      status: '',
+      direction: 'out',
+      virtualAccountNo: undefined, // Not applicable for transfers
+    };
+  } catch (error) {
+    return null;
+  }
+}
 
-    if (!isQRTransfer) {
-      // Check if recipient is actually a bank name and should be moved to acquirer (only for merchant payments)
-      const bankPatterns = [
-        /^Bank\s+(BCA|BRI|BNI|MANDIRI|CIMB|PERMATA|DANAMON|MAYBANK)/i,
-        /^(BCA|BRI|BNI|MANDIRI|CIMB|PERMATA|DANAMON|MAYBANK)\s*$/i,
-      ];
+// Enhanced parser for Bank Mandiri merchant payment emails
+function parseBankMandiriMerchantEmail(htmlContent: string, actualSender?: string): EmailTransactionData | null {
+  try {
+    const decodedHtml = decodeQuotedPrintable(htmlContent);
 
-      // If recipient looks like a bank name, try to extract merchant from other fields
-      if (recipient && bankPatterns.some(pattern => pattern.test(recipient))) {
-        // Move bank name to acquirer if not already set
-        if (!actualAcquirer) {
-          actualAcquirer = recipient;
-        }
+    // Check if this is a merchant payment email (but exclude PLN Prabayar which is a top-up)
+    const isPLNPrabayar = decodedHtml.includes('PLN Prabayar');
+    const isMerchantPayment = !isPLNPrabayar && (
+                             decodedHtml.includes('Payment is Successful!') ||
+                             decodedHtml.includes('Transaction Amount') ||
+                             decodedHtml.includes('Merchant PAN')
+                           );
 
-        // Try to find actual merchant name from h4 tags or other sources
-        const allH4Matches = htmlContent.match(/<h4[^>]*>([^<]+)<\/h4>/gis);
-        if (allH4Matches) {
-          for (const h4Match of allH4Matches) {
-            const h4Text = h4Match.replace(/<[^>]*>/g, '').trim();
-            // Skip if it's a bank name, user name, or generic text
-            if (!bankPatterns.some(pattern => pattern.test(h4Text)) &&
-                !h4Text.match(/Payment|Transaction|Source/i) &&
-                h4Text.length > 3) {
-              actualRecipient = h4Text;
-              break;
-            }
-          }
-        }
+    if (!isMerchantPayment) {
+      return null;
+    }
+
+    // Extract recipient merchant name
+    const recipientMatch = decodedHtml.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>/is) ||
+                          decodedHtml.match(/<h4[^>]*style[^>]*text-align:left[^>]*>([^<]+)<\/h4>/is);
+    const recipient = recipientMatch?.[1]?.trim() || '';
+
+    // Extract location
+    const locationMatch = decodedHtml.match(/<p[^>]*>([^<]*JAKARTA[^<]*-[^<]*ID[^<]*)<\/p>/is) ||
+                         decodedHtml.match(/>(JAKARTA[^<]*-[^<]*ID[^<]*)</is);
+    const location = locationMatch?.[1]?.trim() || '';
+
+    // Extract acquirer
+    const acquirerMatch = decodedHtml.match(/<td[^>]*>Acquirer<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const acquirer = acquirerMatch?.[1]?.trim()
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+      .trim() || '';
+
+    // Extract date and time
+    const dateMatch = decodedHtml.match(/<td[^>]*>Date<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const timeMatch = decodedHtml.match(/<td[^>]*>Time<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const dateStr = dateMatch?.[1]?.trim();
+    const timeStr = timeMatch?.[1]?.trim();
+
+    // Extract transaction amount
+    const amountMatch = decodedHtml.match(/<td[^>]*>Transaction\s*Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is) ||
+                       decodedHtml.match(/<td[^>]*>Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const amount = parseIndonesianRupiah(amountMatch?.[1]?.trim() || '0');
+
+    // Extract transaction reference
+    const refMatch = decodedHtml.match(/<td[^>]*>Transaction\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
+                    decodedHtml.match(/<td[^>]*>Reference\s*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
+
+    // Extract additional fields for merchant payments
+    const qrisRefMatch = decodedHtml.match(/<td[^>]*>QRIS\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const merchantPanMatch = decodedHtml.match(/<td[^>]*>Merchant PAN<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const customerPanMatch = decodedHtml.match(/<td[^>]*>Customer PAN<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+    const terminalIdMatch = decodedHtml.match(/<td[^>]*>Terminal ID<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+
+    // Extract virtual account number
+    let virtualAccountNo = '';
+    if (recipient) {
+      const vaMatch = decodedHtml.match(new RegExp(`<h4[^>]*>${recipient.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}<\/h4>\\s*<div[^>]*>([0-9]{10,})<\/div>`, 'is'));
+      virtualAccountNo = vaMatch?.[1]?.trim() || '';
+    }
+
+    // Extract source of fund - try multiple patterns
+    let sourceMatch = decodedHtml.match(/<p[^>]*>Source of Fund<\/p>\s*<h4[^>]*>([^<]+)<\/h4>\s*<p[^>]*>\*{4}(\d+)<\/p>/is);
+
+    if (!sourceMatch) {
+      sourceMatch = decodedHtml.match(/<p[^>]*>Source of Fund<\/p>\s*<h4[^>]*>([^<]+)<\/h4>\s*<p[^>]*>([^<]+)<\/p>/is);
+    }
+
+    if (!sourceMatch) {
+      // Try a more flexible pattern
+      sourceMatch = decodedHtml.match(/Source of Fund[^<]*<[^>]*>([^<]+)<[^>]*>[^<]*<[^>]*>\*{4}(\d+)/is);
+    }
+
+    if (!sourceMatch) {
+      // Try to find any pattern with **** followed by digits
+      const anyMaskedMatch = decodedHtml.match(/\*{4}(\d+)/);
+      if (anyMaskedMatch) {
+        // Find the source of fund name before the masked account
+        const beforeMasked = decodedHtml.substring(0, decodedHtml.indexOf(anyMaskedMatch[0]));
+        const sourceNameMatch = beforeMasked.match(/Source of Fund[^<]*<[^>]*>([^<]+)<[^>]*>/is);
+                 sourceMatch = [anyMaskedMatch[0], sourceNameMatch?.[1] || '', anyMaskedMatch[1]] as RegExpMatchArray;
       }
     }
 
-    // Detect transaction direction based on email content and patterns
-    let direction: "in" | "out" = "out"; // Default to expense
+    if (!sourceMatch) {
+      // Try to find source of fund with just **** (no numbers)
+      const sourceOfFundMatch = decodedHtml.match(/Source of Fund[^<]*<[^>]*>([^<]+)<[^>]*>/is);
+      const justMaskedMatch = decodedHtml.match(/\*{4}(?!\d)/); // **** without following digits
+      if (sourceOfFundMatch && justMaskedMatch) {
+        sourceMatch = [justMaskedMatch[0], sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
 
-    // Check for income indicators in email content
-    const incomePatterns = [
-      /refund/i,
-      /transfer.*received/i,
-      /payment.*received/i,
-      /deposit/i,
-      /credit/i,
-      /incoming/i
-    ];
+    if (!sourceMatch) {
+      // Try to match the specific HTML structure from the email with precise boundaries
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]+)<\/div>\s*<div[^>]*>\*{4}<\/div>/is);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
 
-    const expensePatterns = [
-      /payment.*successful/i,
-      /transaction.*successful/i,
-      /payment.*completed/i,
-      /transfer.*successful/i, // Add transfer successful pattern
-      /purchase/i,
-      /withdrawal/i,
-      /debit/i
-    ];
+    if (!sourceMatch) {
+      // Try a more precise pattern that looks for the exact structure
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]+)<\/div>\s*<div[^>]*>\*{4}<\/div>\s*<\/table>/is);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
 
-    // Check email subject and content for direction indicators
-    const emailContent = `${htmlContent}`;
+    if (!sourceMatch) {
+      // Try to find the source of fund section and extract just the name
+      const sourceOfFundSection = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]+)<\/div>/is);
+      if (sourceOfFundSection) {
+        sourceMatch = ['****', sourceOfFundSection[1] || '', ''] as RegExpMatchArray;
+      }
+    }
 
-    const hasIncomePattern = incomePatterns.some(pattern => pattern.test(emailContent));
-    const hasExpensePattern = expensePatterns.some(pattern => pattern.test(emailContent));
+    if (!sourceMatch) {
+      // Try to find the exact source of fund name by looking for the specific div structure
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*style[^>]*font-weight:\s*600[^>]*>([^<]+)<\/div>/is);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
 
-    if (hasIncomePattern && !hasExpensePattern) {
-      direction = "in";
-    } else if (hasExpensePattern || (!hasIncomePattern && !hasExpensePattern)) {
-      // Default to expense if unclear or has expense patterns
-      // QR transfers are typically "out" (sending money)
-      direction = "out";
+    if (!sourceMatch) {
+      // Try to find the source of fund name by looking for the specific style attribute
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*text-align:\s*left;\s*margin:\s*0;\s*font-weight:\s*600[^>]*>([^<]+)<\/div>/is);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try a more robust approach: find the source of fund section and extract just the name
+      const sourceOfFundSection = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]+)<\/div>\s*<div[^>]*>\*{4}<\/div>/is);
+      if (sourceOfFundSection) {
+        // Extract just the source of fund name, not the entire section
+        const sourceOfFundName = sourceOfFundSection[1]?.trim() || '';
+        sourceMatch = ['****', sourceOfFundName, ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try a very specific pattern that stops at the right boundary
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]*?)\s*<\/div>\s*<div[^>]*>\*{4}<\/div>/is);
+      if (sourceOfFundMatch) {
+        const sourceOfFundName = sourceOfFundMatch[1]?.trim() || '';
+        sourceMatch = ['****', sourceOfFundName, ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try to find the exact pattern from the problematic email
+      const sourceOfFundMatch = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>\s*<div[^>]*>([^<]*?Credit Card[^<]*?Mandiri[^<]*?Platinum[^<]*?)<\/div>/is);
+      if (sourceOfFundMatch) {
+        const sourceOfFundName = sourceOfFundMatch[1]?.trim() || '';
+        sourceMatch = ['****', sourceOfFundName, ''] as RegExpMatchArray;
+      }
+    }
+
+        const sourceOfFund = sourceMatch?.[1]?.trim() || '';
+    const sourceAccount = sourceMatch?.[2]?.trim() || '';
+
+    // Debug logging for the problematic transaction
+    if (transactionRefNo === '702507251831041775') {
+      console.log('🔍 Debug: Found problematic transaction, checking source of fund extraction...');
+      console.log('🔍 Debug: Current sourceOfFund:', sourceOfFund);
+      console.log('🔍 Debug: Current sourceAccount:', sourceAccount);
+
+      // Try to find the exact HTML structure around Source of Fund
+      const sourceOfFundSection = decodedHtml.match(/<div[^>]*>Source of Fund<\/div>[\s\S]*?<\/div>/is);
+      if (sourceOfFundSection) {
+        console.log('🔍 Debug: Found Source of Fund section:', sourceOfFundSection[0]);
+      }
     }
 
 
 
-    // Parse Indonesian Rupiah format: "55.000,00" = 55000.00
-    let amount = 0;
-    if (rawAmountStr) {
-      // Handle Indonesian format: periods are thousand separators, comma is decimal separator
-      if (rawAmountStr.includes(',')) {
-        // Split by comma to separate integer and decimal parts
-        const parts = rawAmountStr.split(',');
-        const integerPart = parts[0];
-        const decimalPart = parts[1];
-        if (integerPart) {
-          // Remove periods (thousand separators) from integer part
-          const cleanInteger = integerPart.replace(/\./g, '');
-          // Combine as decimal number
-          amount = parseFloat(`${cleanInteger}.${decimalPart || '00'}`);
-        }
+
+
+    // Validate required fields
+    if (!recipient || !amount || amount <= 0) {
+      return null;
+    }
+
+    // Final fallback: remove masking from source account if it still has it
+    const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
+
+    // Special fix for the problematic transaction - clean up sourceOfFund if it contains email footer
+    let finalSourceOfFund = sourceOfFund;
+    if (finalSourceOfFund && (finalSourceOfFund.includes('Save this email') || finalSourceOfFund.includes('Thank you for using Livin'))) {
+      // Extract just the part before the email footer
+      const cleanMatch = finalSourceOfFund.match(/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i);
+      if (cleanMatch && cleanMatch[1]) {
+        finalSourceOfFund = cleanMatch[1].trim();
       } else {
-        // No comma, just remove periods and treat as integer
-        amount = parseFloat(rawAmountStr.replace(/\./g, ''));
+        // Fallback: just take everything before "Save this email"
+        const beforeFooter = finalSourceOfFund.split('Save this email')[0];
+        if (beforeFooter) {
+          finalSourceOfFund = beforeFooter.trim();
+        }
       }
     }
 
-    // Parse date and time
-    let transactionDate = new Date();
-    if (dateStr && timeStr) {
-      // Convert "2 Aug 2025" and "20:44:34 WIB" to Date
-      const dateTimeStr = `${dateStr} ${timeStr.replace(' WIB', '+07:00')}`;
-      const parsedDate = new Date(dateTimeStr);
-      if (!isNaN(parsedDate.getTime())) {
-        transactionDate = parsedDate;
+    // Ensure sourceOfFund doesn't exceed database limit (255 characters)
+    if (finalSourceOfFund && finalSourceOfFund.length > 255) {
+      // Try to extract just the essential part
+      const essentialMatch = finalSourceOfFund.match(/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i);
+      if (essentialMatch && essentialMatch[1]) {
+        finalSourceOfFund = essentialMatch[1].trim();
+      } else {
+        // Last resort: truncate to 255 characters
+        finalSourceOfFund = finalSourceOfFund.substring(0, 255).trim();
       }
     }
 
     return {
-      recipient: actualRecipient,
-      location: location,
-      transactionDate,
+      recipient,
+      location,
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount,
+      fee: 0, // No fee for merchant payments
+      totalAmount: amount, // Same as amount for merchant payments
       currency: 'IDR',
-      transactionRefNo: transactionRefNo || '',
-      qrisRefNo,
-      merchantPan,
-      customerPan,
-      acquirer: actualAcquirer,
-      terminalId,
-      sourceOfFund: sourceOfFund,
-      sourceAccount: sourceAccount,
-      bankSender: 'noreply.livin@bankmandiri.co.id',
-      emailSubject: isQRTransfer ? 'Transfer Successful' : 'Payment is Successful!',
-      transactionType: transactionType,
-      status: 'successful',
-      direction: direction,
-      virtualAccountNo: virtualAccountNo,
+      transactionRefNo,
+      qrisRefNo: qrisRefMatch?.[1]?.trim(),
+      merchantPan: merchantPanMatch?.[1]?.trim(),
+      customerPan: customerPanMatch?.[1]?.trim(),
+      acquirer,
+      terminalId: terminalIdMatch?.[1]?.trim(),
+      sourceOfFund: finalSourceOfFund,
+      sourceAccount: finalSourceAccount,
+      recipientBank: '',
+      recipientBankAccount: '',
+      transferPurpose: '',
+      bankSender: actualSender || '',
+      emailSubject: '',
+      transactionType: '',
+      status: '',
+      direction: 'out',
+      virtualAccountNo,
     };
   } catch (error) {
+    return null;
+  }
+}
 
+export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject?: string, actualSender?: string): ParsedTransaction | null {
+  try {
+    // Try parsing as top-up email first
+    const topUpData = parseBankMandiriTopUpEmail(htmlContent, actualSender);
+    if (topUpData) {
+      return {
+        recipient: topUpData.recipient,
+        location: topUpData.location,
+        transactionDate: topUpData.transactionDate,
+        amount: topUpData.amount,
+        currency: topUpData.currency,
+        transactionRefNo: topUpData.transactionRefNo,
+        qrisRefNo: topUpData.qrisRefNo,
+        merchantPan: topUpData.merchantPan,
+        customerPan: topUpData.customerPan,
+        acquirer: topUpData.acquirer,
+        terminalId: topUpData.terminalId,
+        sourceOfFund: topUpData.sourceOfFund,
+        sourceAccount: topUpData.sourceAccount,
+        bankSender: topUpData.bankSender,
+        emailSubject: actualSubject || topUpData.emailSubject,
+        transactionType: topUpData.transactionType,
+        status: topUpData.status,
+        direction: topUpData.direction,
+        virtualAccountNo: topUpData.virtualAccountNo,
+      };
+    }
+
+    // Try parsing as transfer email
+    const transferData = parseBankMandiriTransferEmail(htmlContent, actualSender);
+    if (transferData) {
+      return {
+        recipient: transferData.recipient,
+        location: transferData.location,
+        transactionDate: transferData.transactionDate,
+        amount: transferData.amount,
+        currency: transferData.currency,
+        transactionRefNo: transferData.transactionRefNo,
+        qrisRefNo: transferData.qrisRefNo,
+        merchantPan: transferData.merchantPan,
+        customerPan: transferData.customerPan,
+        acquirer: transferData.acquirer,
+        terminalId: transferData.terminalId,
+        sourceOfFund: transferData.sourceOfFund,
+        sourceAccount: transferData.sourceAccount,
+        bankSender: transferData.bankSender,
+        emailSubject: actualSubject || transferData.emailSubject,
+        transactionType: transferData.transactionType,
+        status: transferData.status,
+        direction: transferData.direction,
+        virtualAccountNo: transferData.virtualAccountNo,
+      };
+    }
+
+    // Try parsing as merchant payment email
+    const merchantData = parseBankMandiriMerchantEmail(htmlContent, actualSender);
+    if (merchantData) {
+    return {
+        recipient: merchantData.recipient,
+        location: merchantData.location,
+        transactionDate: merchantData.transactionDate,
+        amount: merchantData.amount,
+        currency: merchantData.currency,
+        transactionRefNo: merchantData.transactionRefNo,
+        qrisRefNo: merchantData.qrisRefNo,
+        merchantPan: merchantData.merchantPan,
+        customerPan: merchantData.customerPan,
+        acquirer: merchantData.acquirer,
+        terminalId: merchantData.terminalId,
+        sourceOfFund: merchantData.sourceOfFund,
+        sourceAccount: merchantData.sourceAccount,
+        bankSender: merchantData.bankSender,
+        emailSubject: actualSubject || merchantData.emailSubject,
+        transactionType: merchantData.transactionType,
+        status: merchantData.status,
+        direction: merchantData.direction,
+        virtualAccountNo: merchantData.virtualAccountNo,
+      };
+    }
+
+    return null;
+  } catch (error) {
     return null;
   }
 }
@@ -407,18 +679,17 @@ export function parseBankMandiriEmail(message: GmailMessage): ParsedTransaction 
     const headers = message.payload.headers;
     const fromHeader = headers.find(h => h.name === 'From')?.value || '';
     const subjectHeader = headers.find(h => h.name === 'Subject')?.value || '';
-    const dateHeader = headers.find(h => h.name === 'Date')?.value || '';
 
     // Only process Bank Mandiri emails
     if (!fromHeader.includes('noreply.livin@bankmandiri.co.id')) {
       return null;
     }
 
-    // Try to get HTML content first for better parsing
+    // Extract HTML content from email
     let htmlContent = '';
     let emailBody = '';
 
-    // First try to get HTML from the main payload or parts
+    // Try to get HTML content from the main payload or parts
     if (message.payload.body?.data) {
       const content = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
       if (message.payload.mimeType === 'text/html') {
@@ -427,8 +698,9 @@ export function parseBankMandiriEmail(message: GmailMessage): ParsedTransaction 
         emailBody = content;
       }
     }
+
     // Check parts for HTML content
-    else if (message.payload.parts) {
+    if (message.payload.parts) {
       for (const part of message.payload.parts) {
         if (part.mimeType === 'text/html' && part.body?.data) {
           htmlContent = Buffer.from(part.body.data, 'base64').toString('utf-8');
@@ -461,384 +733,360 @@ export function parseBankMandiriEmail(message: GmailMessage): ParsedTransaction 
 
     // Try HTML parsing first if we have HTML content
     if (htmlContent) {
-
-      const htmlResult = parseBankMandiriEmailFromHtml(htmlContent);
+      const htmlResult = parseBankMandiriEmailFromHtml(htmlContent, subjectHeader, fromHeader);
       if (htmlResult) {
-
         return htmlResult;
       }
-
     }
 
-    // Fall back to the existing regex-based parsing if HTML parsing fails
+    // Fall back to text-based parsing if HTML parsing fails
     if (!emailBody && htmlContent) {
-      // If we only have HTML, convert it to text for regex parsing
+      // Convert HTML to text for regex parsing
       emailBody = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
     if (!emailBody) {
-
       return null;
     }
 
-
-
-    // Check if this is a QR transfer email vs BI Fast transfer vs merchant payment
+    // Enhanced fallback parsing for different transaction types
+    const isTopUp = subjectHeader.includes('Top-up Successful') || emailBody.includes('Service Provider');
     const isQRTransfer = subjectHeader.includes('QR Transfer Successful') || emailBody.includes('QR transfer details');
     const isBIFastTransfer = subjectHeader.includes('BI Fast Transfer Successful') || emailBody.includes('BI Fast Ref. No.');
 
-    let recipient = '';
-    let location = '';
-    let transactionType = 'payment';
-    let actualAcquirer = '';
+    // Try simple PLN Prabayar format first (most specific)
+    const simplePLNResult = parseSimplePLNPrabayar(emailBody, subjectHeader, fromHeader);
+    if (simplePLNResult) {
+      return simplePLNResult;
+    }
 
-    if (isBIFastTransfer) {
-
-
-      // For BI Fast transfers, extract recipient person's name
-      const recipientMatch = emailBody.match(/Recipient\s*([^\n\r]*?)\s*(?:Bank|Date|\s*&nbsp;|$)/i);
-
-      if (recipientMatch) {
-        recipient = recipientMatch[1]?.trim() || ''; // Person's name
-
-        // Extract the bank name separately
-        const bankMatch = emailBody.match(/Bank\s+([^-]+)/i);
-        if (bankMatch && bankMatch[1]) {
-          // Clean up HTML entities and extra whitespace
-          const cleanBankName = bankMatch[1].trim()
-            .replace(/&nbsp;/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          location = `Bank ${cleanBankName}`; // e.g., "Bank Rakyat Indonesia"
-        }
-      }
-
-      transactionType = 'transfer';
-
-
-    } else if (isQRTransfer) {
-
-
-      // For QR transfers, extract recipient person's name
-      const recipientMatch = emailBody.match(/Recipient\s*([^\n\r]*?)\s*(?:Bank|Date|\s*&nbsp;|$)/i);
-
-      if (recipientMatch) {
-        recipient = recipientMatch[1]?.trim() || ''; // Person's name
-
-        // Extract the bank name separately
-        const bankMatch = emailBody.match(/Bank\s+(BCA|BRI|BNI|MANDIRI|CIMB|PERMATA|DANAMON|MAYBANK)[^A-Z]*/i);
-        if (bankMatch && bankMatch[1]) {
-          location = `Bank ${bankMatch[1]}`; // e.g., "Bank BCA"
-        }
-      }
-
-      transactionType = 'transfer';
-
-
+    // Parse based on transaction type
+    if (isTopUp) {
+      return parseTopUpFromText(emailBody, subjectHeader, fromHeader);
+    } else if (isQRTransfer || isBIFastTransfer) {
+      return parseTransferFromText(emailBody, subjectHeader, isQRTransfer, fromHeader);
     } else {
-
-
-      // Parse Bank Mandiri transaction details with more flexible patterns
-      // Extract recipient merchant name - improved pattern to handle LIPPO in merchant names
-      const recipientMatch = emailBody.match(/Recipient\s*([^\n\r]*?)\s*(?:Date|\s*&nbsp;|$)/i) ||
-                            emailBody.match(/Recipient\s*:\s*([^\n\r]+?)(?:\s+JAKARTA|\s+Date|$)/i) ||
-                            emailBody.match(/Recipient\s+([A-Z0-9\s]+(?:LIPPO|MALL|STORE|CAFE|RESTAURANT)?[A-Z0-9\s]*?)(?:\s+JAKARTA|\s+Date|\s*$)/i);
-
-      // Clean up recipient if it contains extra data
-      let cleanRecipient = recipientMatch?.[1]?.trim();
-      if (cleanRecipient) {
-        // Remove any trailing location data but keep LIPPO if it's part of merchant name
-        cleanRecipient = cleanRecipient.replace(/\s*(?:JAKARTA(?:\s+[A-Z]+)?(?:\s*-\s*ID)?|Date).*$/i, '').trim();
-
-        // Clean up any HTML entities or extra whitespace
-        cleanRecipient = cleanRecipient.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
-
-        // If recipient starts with colon, remove it (e.g., ": Tokopedia" -> "Tokopedia")
-        cleanRecipient = cleanRecipient.replace(/^:\s*/, '');
-
-        // If it's still too long, try to extract just the core merchant name
-        if (cleanRecipient.length > 50) {
-          const merchantMatch = cleanRecipient.match(/^([A-Z\s\d]+(?:MALL|PLAZA|STORE|SHOP|CAFE|RESTAURANT|LIPPO|PU)?[A-Z\s\d]*?)(?:\s+\d{10,})?$/i);
-          if (merchantMatch && merchantMatch[1]) {
-            cleanRecipient = merchantMatch[1].trim();
-          }
-        }
-      }
-
-      recipient = cleanRecipient || '';
-
-      const locationMatch = emailBody.match(/(JAKARTA\s+BARAT\s*-\s*ID)/i) ||
-                           emailBody.match(/(JAKARTA\s+TIMUR\s*-\s*ID)/i) ||
-                           emailBody.match(/([A-Z\s]+)\s*-\s*ID/);
-      location = locationMatch?.[1]?.trim() || '';
-
-      const textAcquirerMatch = emailBody.match(/Acquirer\s+([^\n\r]+)/i);
-      const rawAcquirer = textAcquirerMatch?.[1]?.trim() || '';
-      // Clean up HTML entities and extra whitespace
-      actualAcquirer = rawAcquirer
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      return parseMerchantPaymentFromText(emailBody, subjectHeader, fromHeader);
     }
+  } catch (error) {
+    return null;
+  }
+}
 
-    // Extract acquirer first (needed for bank detection logic)
-    const fallbackAcquirerMatch = htmlContent.match(/<td[^>]*>Acquirer<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+// Helper function to parse top-up transactions from text
+function parseTopUpFromText(emailBody: string, subjectHeader: string, actualSender?: string): ParsedTransaction | null {
+  try {
+    // Extract service provider
+    const serviceProviderMatch = emailBody.match(/Service Provider\s*([^\n\r]+)/i);
+    const serviceProvider = serviceProviderMatch?.[1]?.trim() || '';
 
-    // Check if recipient is actually a bank name and should be moved to acquirer (only for merchant payments)
-    let actualRecipient = recipient;
-    if (!actualAcquirer) {
-      actualAcquirer = fallbackAcquirerMatch?.[1]?.trim() || '';
-    }
+    // Extract amounts
+    const topUpAmountMatch = emailBody.match(/Top-up Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i);
+    const transactionFeeMatch = emailBody.match(/Transaction Fee\s+(?:Rp|IDR)\s+([\d,.]+)/i);
+    const totalAmountMatch = emailBody.match(/Total\s+(?:Rp|IDR)\s+([\d,.]+)/i);
 
-    if (!isQRTransfer) {
-      const bankPatterns = [
-        /^Bank\s+(BCA|BRI|BNI|MANDIRI|CIMB|PERMATA|DANAMON|MAYBANK)/i,
-        /^(BCA|BRI|BNI|MANDIRI|CIMB|PERMATA|DANAMON|MAYBANK)\s*$/i,
-      ];
+    const topUpAmount = parseIndonesianRupiah(topUpAmountMatch?.[1]?.trim() || '0');
+    const transactionFee = parseIndonesianRupiah(transactionFeeMatch?.[1]?.trim() || '0');
+    const totalAmount = parseIndonesianRupiah(totalAmountMatch?.[1]?.trim() || '0');
 
-      // If recipient looks like a bank name, try to extract merchant from other fields
-      if (recipient && bankPatterns.some(pattern => pattern.test(recipient))) {
-        // Move bank name to acquirer if not already set
-        if (!actualAcquirer) {
-          actualAcquirer = recipient;
-        }
+    // Extract reference number
+    const refMatch = emailBody.match(/Reference No\.?\s+(\d+)/i);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
 
-        // Try to find actual merchant name from h4 tags or other sources
-        const allH4Matches = htmlContent.match(/<h4[^>]*>([^<]+)<\/h4>/gis);
-        if (allH4Matches) {
-          for (const h4Match of allH4Matches) {
-            const h4Text = h4Match.replace(/<[^>]*>/g, '').trim();
-            // Skip if it's a bank name, user name, or generic text
-            if (!bankPatterns.some(pattern => pattern.test(h4Text)) &&
-                !h4Text.match(/Payment|Transaction|Source/i) &&
-                h4Text.length > 3) {
-              actualRecipient = h4Text;
-              break;
-            }
-          }
-        }
-      }
-    }
+    // Extract source account
+    const sourceMatch = emailBody.match(/\*{4}(\d+)/);
+    const sourceAccount = sourceMatch?.[1]?.trim() || '';
 
+    // Extract date and time
     const dateMatch = emailBody.match(/Date\s+(\d{1,2}\s+\w+\s+\d{4})/i);
     const timeMatch = emailBody.match(/Time\s+(\d{2}:\d{2}:\d{2}\s+WIB)/i);
+    const dateStr = dateMatch?.[1];
+    const timeStr = timeMatch?.[1];
 
-    // Handle different amount patterns for transfers vs payments
-    let amountMatch;
-    if (isQRTransfer || isBIFastTransfer) {
-      // For QR transfers and BI Fast transfers, look for "Total Transaction" first, then fallback to "Amount"
-      amountMatch = emailBody.match(/Total\s+Transaction\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
-                   emailBody.match(/Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
-                   emailBody.match(/Transfer\s+Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
-                   emailBody.match(/(?:Rp|IDR)\s+([\d,.]+)/i);
-    } else {
-      // For merchant payments, use regular "Transaction Amount"
-      amountMatch = emailBody.match(/Transaction\s+Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
-                   emailBody.match(/Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
-                   emailBody.match(/(?:Rp|IDR)\s+([\d,.]+)/i);
-    }
-
-    const transactionRefMatch = emailBody.match(/Transaction\s+Ref\.?\s+No\.?\s+(\d+)/i) ||
-                               emailBody.match(/Ref\.?\s+No\.?\s+(\d+)/i) ||
-                               emailBody.match(/Reference\s+No\.?\s+(\d+)/i) ||
-                               emailBody.match(/BI\s+Fast\s+Ref\.?\s+No\.?\s+([A-Z0-9]+)/i);
-
-    // QRIS ref only for merchant payments
-    const qrisRefMatch = !isQRTransfer ? emailBody.match(/QRIS\s+Ref\.?\s+No\.?\s+(\d+)/i) : null;
-
-    // Extract virtual account number for virtual account transactions (only for merchant payments)
-    let virtualAccountNo = '';
-    if (!isQRTransfer && actualRecipient && /tokopedia|shopee|bukalapak|blibli/i.test(actualRecipient)) {
-      const vaMatch = emailBody.match(/(\d{10,})/);
-      virtualAccountNo = vaMatch?.[1] || '';
-    }
-
-    const merchantPanMatch = !isQRTransfer ? emailBody.match(/Merchant\s+PAN\s+(\d+)/i) : null;
-    const customerPanMatch = !isQRTransfer ? emailBody.match(/Customer\s+PAN\s+(\d+)/i) : null;
-    const terminalIdMatch = !isQRTransfer ? emailBody.match(/Terminal\s+ID\s+(\d+)/i) : null;
-        const sourceAccountMatch = emailBody.match(/\*{4}(\d+)/);
-
-        // Extract source of fund data - look for the raw data in the email
-    // This could be in various formats, so let's capture what we find
-    let sourceOfFund = '';
-
-            // Try to find source of fund in different possible formats
-        // Make patterns more specific to avoid capturing HTML tags
-        const sourceOfFundPatterns = [
-          /Source\s+of\s+Fund\s*:\s*([^<>\n\r]+)/i,  // More specific - stop at HTML tags
-          /Source\s+of\s+Fund\s*([^<>\n\r]+)/i,      // More specific - stop at HTML tags
-          /Bank\s+Mandiri\s+Debit\s*([^<>\n\r]+)/i,  // More specific - stop at HTML tags
-          /Debit\s+([^<>\n\r]+)/i,                    // More specific - stop at HTML tags
-          /Account\s*:\s*([^<>\n\r]+)/i,              // More specific - stop at HTML tags
-          /Card\s*:\s*([^<>\n\r]+)/i                  // More specific - stop at HTML tags
-        ];
-
-    for (const pattern of sourceOfFundPatterns) {
-      const match = emailBody.match(pattern);
-      if (match && match[1]) {
-        sourceOfFund = match[1].trim();
-
-        break;
-      }
-    }
-
-                // If no pattern matched, try to find the account number and name separately
-    if (!sourceOfFund) {
-      // Look for the full account number format (****2191) in the email
-      // Try multiple patterns to find the account number in different HTML structures
-      const accountNumberPatterns = [
-        /<p[^>]*>\s*\*{4}\d+\s*<\/p>/i,  // Account number in p tag
-        /\*{4}\d+/i,                      // Any **** followed by digits
-        /<td[^>]*>\s*\*{4}\d+\s*<\/td>/i  // Account number in td tag
-      ];
-
-      let accountNumber = '';
-      for (const pattern of accountNumberPatterns) {
-        const match = emailBody.match(pattern);
-        if (match) {
-          // Extract just the account number part
-          const accountMatch = match[0].match(/\*{4}\d+/);
-          if (accountMatch) {
-            accountNumber = accountMatch[0];
-            break;
-          }
-        }
-      }
-
-      // Look for account holder name in h4 tags
-      const nameMatch = emailBody.match(/<h4[^>]*>\s*([A-Z\s]+)\s*<\/h4>/i);
-      let name = '';
-      if (nameMatch && nameMatch[1]) {
-        name = nameMatch[1].trim();
-        // Skip if it's a bank name or generic text
-        if (name.match(/Bank|Payment|Transaction|Source|Recipient|Amount|Date|Time/i)) {
-          name = '';
-        }
-      }
-
-
-
-      if (accountNumber && name) {
-        sourceOfFund = `${accountNumber} ${name}`;
-      } else if (accountNumber) {
-        sourceOfFund = accountNumber;
-      } else if (name) {
-        sourceOfFund = name;
-      }
-    }
-
-
-
-
-
-    // Extract and validate required fields
-    const finalRecipient = actualRecipient;
-    const finalLocation = location;
-
-    // Parse Indonesian Rupiah format: "55.000,00" = 55000.00
-    let amount = 0;
-    const rawAmountStr = amountMatch?.[1];
-
-    if (rawAmountStr) {
-      // Remove commas first for processing
-      const amountStr = rawAmountStr.replace(/,/g, '');
-
-      // Handle Indonesian format: periods are thousand separators, comma is decimal separator
-      if (rawAmountStr.includes(',')) {
-        // Split by comma to separate integer and decimal parts
-        const parts = rawAmountStr.split(',');
-        const integerPart = parts[0];
-        const decimalPart = parts[1];
-        if (integerPart) {
-          // Remove periods (thousand separators) from integer part
-          const cleanInteger = integerPart.replace(/\./g, '');
-          // Combine as decimal number
-          amount = parseFloat(`${cleanInteger}.${decimalPart || '00'}`);
-        }
-      } else {
-        // No comma, just remove periods and treat as integer
-        amount = parseFloat(amountStr.replace(/\./g, ''));
-      }
-    }
-
-
-
-    if (!finalRecipient || !amount || amount <= 0) {
-      const missingFields = [];
-      if (!finalRecipient) missingFields.push('recipient');
-      if (!amount || amount <= 0) missingFields.push('amount');
-
+    // Validate required fields
+    if (!serviceProvider || !totalAmount || totalAmount <= 0) {
       return null;
     }
 
-    // Detect transaction direction for fallback parsing as well
-    let direction: "in" | "out" = "out"; // Default to expense
+    // Final fallback: remove masking from source account if it still has it
+    const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
 
-    const incomePatterns = [
-      /refund/i,
-      /transfer.*received/i,
-      /payment.*received/i,
-      /deposit/i,
-      /credit/i,
-      /incoming/i
-    ];
+    return {
+      recipient: serviceProvider,
+      location: '',
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
+      amount: totalAmount,
+      currency: 'IDR',
+      transactionRefNo,
+      sourceOfFund: '',
+      sourceAccount: finalSourceAccount,
+      bankSender: actualSender || '',
+      emailSubject: subjectHeader,
+      transactionType: '',
+      status: '',
+      direction: 'out',
+    };
+  } catch (error) {
+    return null;
+  }
+}
 
-    const expensePatterns = [
-      /payment.*successful/i,
-      /transaction.*successful/i,
-      /payment.*completed/i,
-      /transfer.*successful/i, // Add transfer successful pattern
-      /purchase/i,
-      /withdrawal/i,
-      /debit/i
-    ];
+// Helper function to parse transfer transactions from text
+function parseTransferFromText(emailBody: string, subjectHeader: string, isQRTransfer: boolean, actualSender?: string): ParsedTransaction | null {
+  try {
+    // Extract recipient information
+    const recipientMatch = emailBody.match(/Recipient\s*([^\n\r]*?)\s*(?:Bank|Date|\s*&nbsp;|$)/i);
+    const recipient = recipientMatch?.[1]?.trim() || '';
 
-    const hasIncomePattern = incomePatterns.some(pattern => pattern.test(emailBody + subjectHeader));
-    const hasExpensePattern = expensePatterns.some(pattern => pattern.test(emailBody + subjectHeader));
-
-    if (hasIncomePattern && !hasExpensePattern) {
-      direction = "in";
-    } else {
-      direction = "out";
+    // Extract bank name for location
+    let location = '';
+    const bankMatch = emailBody.match(/Bank\s+([^-]+)/i);
+    if (bankMatch && bankMatch[1]) {
+      const cleanBankName = bankMatch[1].trim()
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      location = `Bank ${cleanBankName}`;
     }
 
-    // Parse date and time
+    // Extract amount
+    const totalTransactionMatch = emailBody.match(/Total\s+Transaction\s+(?:Rp|IDR)\s+([\d,.]+)/i);
+    const amountMatch = emailBody.match(/Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i);
+    const amount = parseIndonesianRupiah(
+      (totalTransactionMatch?.[1]?.trim() || amountMatch?.[1]?.trim() || '0')
+    );
+
+    // Extract reference number
+    const refMatch = emailBody.match(/Reference\s+No\.?\s+(\d+)/i) ||
+                    emailBody.match(/BI\s+Fast\s+Ref\.?\s+No\.?\s+([A-Z0-9]+)/i);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
+
+    // Extract source account
+    const sourceMatch = emailBody.match(/\*{4}(\d+)/);
+    const sourceAccount = sourceMatch?.[1]?.trim() || '';
+
+    // Extract date and time
+    const dateMatch = emailBody.match(/Date\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+    const timeMatch = emailBody.match(/Time\s+(\d{2}:\d{2}:\d{2}\s+WIB)/i);
     const dateStr = dateMatch?.[1];
     const timeStr = timeMatch?.[1];
-    let transactionDate = new Date();
 
-    if (dateStr && timeStr) {
-      // Convert "2 Aug 2025" and "20:44:34 WIB" to Date
-      const dateTimeStr = `${dateStr} ${timeStr.replace(' WIB', '+07:00')}`;
-      const parsedDate = new Date(dateTimeStr);
-      if (!isNaN(parsedDate.getTime())) {
-        transactionDate = parsedDate;
+    // Validate required fields
+    if (!recipient || !amount || amount <= 0) {
+      return null;
+    }
+
+    // Final fallback: remove masking from source account if it still has it
+    const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
+
+    return {
+      recipient,
+      location,
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
+      amount,
+      currency: 'IDR',
+      transactionRefNo,
+      sourceOfFund: '',
+      sourceAccount: finalSourceAccount,
+      bankSender: actualSender || '',
+      emailSubject: subjectHeader,
+      transactionType: '',
+      status: '',
+      direction: 'out',
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Helper function to parse simple PLN Prabayar format
+function parseSimplePLNPrabayar(emailBody: string, subjectHeader: string, actualSender?: string): ParsedTransaction | null {
+  try {
+    // Check if this is a simple PLN Prabayar format
+    const isPLNPrabayar = emailBody.includes('PLN Prabayar') &&
+                         emailBody.includes('Ref:') &&
+                         emailBody.includes('-Rp');
+
+    if (!isPLNPrabayar) {
+      return null;
+    }
+
+    // Extract amount (negative amount like "-Rp 50.000")
+    const amountMatch = emailBody.match(/-Rp\s+([\d,.]+)/i);
+    const amount = parseIndonesianRupiah(amountMatch?.[1]?.trim() || '0');
+
+    // Extract reference number
+    const refMatch = emailBody.match(/Ref:\s*(\d+)/i);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
+
+    // Extract date and time
+    const dateTimeMatch = emailBody.match(/(\w+,\s*\d+\s+\w+\s+\d{4})\s+pukul\s+(\d{2}\.\d{2})/i);
+    const dateStr = dateTimeMatch?.[1];
+    const timeStr = dateTimeMatch?.[2]?.replace('.', ':') + ':00 WIB';
+
+    // Extract source account (handle both masked and unmasked formats)
+    const sourceMatch = emailBody.match(/\*{4}(\d+)/) || emailBody.match(/(\d{4})\s*$/m);
+    const sourceAccount = sourceMatch?.[1]?.trim() || '';
+
+    // Extract account holder name
+    const nameMatch = emailBody.match(/^([A-Z\s]+)$/m);
+    const sourceOfFund = nameMatch?.[1]?.trim() || '';
+
+    // Validate required fields
+    if (!amount || amount <= 0 || !transactionRefNo) {
+      return null;
+    }
+
+    // Final fallback: remove masking from source account if it still has it
+    const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
+
+    return {
+      recipient: 'PLN Prabayar',
+      location: '',
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
+      amount,
+      currency: 'IDR',
+      transactionRefNo,
+      sourceOfFund,
+      sourceAccount: finalSourceAccount,
+      bankSender: actualSender || '',
+      emailSubject: subjectHeader,
+      transactionType: 'top-up',
+      status: 'successful',
+      direction: 'out',
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Helper function to parse merchant payment transactions from text
+function parseMerchantPaymentFromText(emailBody: string, subjectHeader: string, actualSender?: string): ParsedTransaction | null {
+  try {
+    // Extract recipient merchant name
+    const recipientMatch = emailBody.match(/Recipient\s*([^\n\r]*?)\s*(?:Date|\s*&nbsp;|$)/i) ||
+                          emailBody.match(/Recipient\s*:\s*([^\n\r]+?)(?:\s+JAKARTA|\s+Date|$)/i);
+
+    let recipient = recipientMatch?.[1]?.trim() || '';
+    if (recipient) {
+      // Clean up recipient
+      recipient = recipient.replace(/\s*(?:JAKARTA(?:\s+[A-Z]+)?(?:\s*-\s*ID)?|Date).*$/i, '').trim();
+      recipient = recipient.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+      recipient = recipient.replace(/^:\s*/, '');
+    }
+
+    // Extract location
+    const locationMatch = emailBody.match(/(JAKARTA\s+BARAT\s*-\s*ID)/i) ||
+                         emailBody.match(/(JAKARTA\s+TIMUR\s*-\s*ID)/i) ||
+                         emailBody.match(/([A-Z\s]+)\s*-\s*ID/);
+    const location = locationMatch?.[1]?.trim() || '';
+
+    // Extract acquirer
+    const acquirerMatch = emailBody.match(/Acquirer\s+([^\n\r]+)/i);
+    const acquirer = acquirerMatch?.[1]?.trim()
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || '';
+
+    // Extract amount
+    const amountMatch = emailBody.match(/Transaction\s+Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i) ||
+                       emailBody.match(/Amount\s+(?:Rp|IDR)\s+([\d,.]+)/i);
+    const amount = parseIndonesianRupiah(amountMatch?.[1]?.trim() || '0');
+
+    // Extract reference number
+    const refMatch = emailBody.match(/Transaction\s+Ref\.?\s+No\.?\s+(\d+)/i) ||
+                    emailBody.match(/Reference\s+No\.?\s+(\d+)/i);
+    const transactionRefNo = refMatch?.[1]?.trim() || '';
+
+    // Extract additional fields
+    const qrisRefMatch = emailBody.match(/QRIS\s+Ref\.?\s+No\.?\s+(\d+)/i);
+    const merchantPanMatch = emailBody.match(/Merchant\s+PAN\s+(\d+)/i);
+    const customerPanMatch = emailBody.match(/Customer\s+PAN\s+(\d+)/i);
+    const terminalIdMatch = emailBody.match(/Terminal\s+ID\s+(\d+)/i);
+
+    // Extract source of fund and account
+    let sourceMatch = emailBody.match(/Source of Fund\s*([^\n\r]*?)\s*(?:\*{4}(\d+)|$)/i) ||
+                     emailBody.match(/([^\n\r]*?)\s*\*{4}(\d+)/i);
+
+    if (!sourceMatch) {
+      // Try to find source of fund with just **** (no numbers)
+      const sourceOfFundMatch = emailBody.match(/Source of Fund\s*([^\n\r]*?)/i);
+      const justMaskedMatch = emailBody.match(/\*{4}(?!\d)/); // **** without following digits
+      if (sourceOfFundMatch && justMaskedMatch) {
+        sourceMatch = [justMaskedMatch[0], sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
       }
     }
 
+    if (!sourceMatch) {
+      // Try to match the specific text structure from the email
+      const sourceOfFundMatch = emailBody.match(/Source of Fund\s*([^\n\r]*?)\s*\*\*\*\*/i);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try a more precise pattern that stops at the end of the source of fund section
+      const sourceOfFundMatch = emailBody.match(/Source of Fund\s*([^\n\r]*?)\s*\*\*\*\*\s*(?:\n|$)/i);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try to find the exact pattern from the problematic email
+      const sourceOfFundMatch = emailBody.match(/Source of Fund\s*([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
+
+    if (!sourceMatch) {
+      // Try a very specific pattern that stops at the right boundary
+      const sourceOfFundMatch = emailBody.match(/Source of Fund\s*([^]*?)\s*\*\*\*\*\s*(?:Save this email|Thank you|PT Bank|$)/i);
+      if (sourceOfFundMatch) {
+        sourceMatch = ['****', sourceOfFundMatch[1] || '', ''] as RegExpMatchArray;
+      }
+    }
+
+    const sourceOfFund = sourceMatch?.[1]?.trim() || '';
+    const sourceAccount = sourceMatch?.[2]?.trim() || '';
+
+    // Extract date and time
+    const dateMatch = emailBody.match(/Date\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+    const timeMatch = emailBody.match(/Time\s+(\d{2}:\d{2}:\d{2}\s+WIB)/i);
+    const dateStr = dateMatch?.[1];
+    const timeStr = timeMatch?.[1];
+
+    // Validate required fields
+    if (!recipient || !amount || amount <= 0) {
+      return null;
+    }
+
+    // Final fallback: remove masking from source account if it still has it
+    const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
+
     return {
-      recipient: finalRecipient,
-      location: finalLocation,
-      transactionDate,
+      recipient,
+      location,
+      transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount,
       currency: 'IDR',
-      transactionRefNo: transactionRefMatch?.[1] || '',
+      transactionRefNo,
       qrisRefNo: qrisRefMatch?.[1],
       merchantPan: merchantPanMatch?.[1],
       customerPan: customerPanMatch?.[1],
-      acquirer: actualAcquirer,
+      acquirer,
       terminalId: terminalIdMatch?.[1],
-      sourceOfFund: sourceOfFund,
-      sourceAccount: sourceAccountMatch ? `****${sourceAccountMatch[1]}` : '',
-      bankSender: fromHeader,
+      sourceOfFund: sourceOfFund || '',
+      sourceAccount: finalSourceAccount,
+      bankSender: actualSender || '',
       emailSubject: subjectHeader,
-      transactionType: transactionType,
-      direction: direction,
-      status: 'successful',
-      virtualAccountNo: virtualAccountNo,
+      transactionType: '',
+      status: '',
+      direction: 'out',
     };
   } catch (error) {
-
     return null;
   }
 }

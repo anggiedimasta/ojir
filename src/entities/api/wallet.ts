@@ -8,6 +8,10 @@ export type TransactionDirection = 'in' | 'out';
 export type BankFilterType = 'all' | 'mandiri' | 'bca' | 'bni' | 'bri' | 'cimb' | 'other';
 export type PaymentMethodFilterType = 'all' | 'qris' | 'transfer' | 'virtual-account' | 'bi-fast' | 'other';
 
+// Multiple selection types - always use arrays
+export type BankFilterValue = BankFilterType[];
+export type PaymentMethodFilterValue = PaymentMethodFilterType[];
+
 // Wallet types
 export type WalletType = 'debit' | 'credit' | 'savings' | 'current' | 'investment';
 
@@ -114,6 +118,8 @@ export interface DatabaseTransaction {
   location: string | null;
   transactionDate: Date;
   amount: string; // Decimal as string from database
+  fee: string; // Decimal as string from database
+  totalAmount: string; // Decimal as string from database
   currency: string;
   transactionRefNo: string | null;
   qrisRefNo: string | null;
@@ -123,6 +129,9 @@ export interface DatabaseTransaction {
   terminalId: string | null;
   sourceOfFund: string | null;
   sourceAccount: string | null;
+  recipientBank: string | null;
+  recipientBankAccount: string | null;
+  transferPurpose: string | null;
   bankSender: string | null;
   emailSubject: string | null;
   transactionType: string | null;
@@ -146,10 +155,15 @@ export interface TransactionResponse {
   recipient: string | null;
   location: string | null;
   amount: string; // Decimal as string to avoid precision issues
+  fee: string; // Decimal as string to avoid precision issues
+  totalAmount: string; // Decimal as string to avoid precision issues
   currency: string;
   transactionDate: Date;
   sourceOfFund: string | null;
   sourceAccount: string | null;
+  recipientBank: string | null;
+  recipientBankAccount: string | null;
+  transferPurpose: string | null;
   acquirer: string | null;
   bankSender: string | null;
   emailSubject: string | null;
@@ -164,6 +178,7 @@ export interface TransactionResponse {
   walletType: string | null;
   walletBankCode: string | null;
   walletBankName: string | null;
+  walletColor: string | null;
 }
 
 // Gmail API email structure
@@ -209,6 +224,36 @@ export interface GmailMessage {
 }
 
 // Parsed transaction data from email
+// Enhanced email parsing interface for internal use
+export interface EmailTransactionData {
+  recipient: string;
+  location: string;
+  transactionDate: Date;
+  amount: number;
+  fee: number;
+  totalAmount: number;
+  currency: string;
+  transactionRefNo: string;
+  qrisRefNo?: string;
+  merchantPan?: string;
+  customerPan?: string;
+  acquirer?: string;
+  terminalId?: string;
+  sourceOfFund: string;
+  sourceAccount: string;
+  recipientBank: string;
+  recipientBankAccount: string;
+  transferPurpose: string;
+  bankSender: string;
+  emailSubject: string;
+  transactionType: string;
+  status: string;
+  direction: "in" | "out";
+  virtualAccountNo?: string;
+  serviceProvider?: string;
+  accountNumber?: string;
+}
+
 export interface ParsedTransaction {
   recipient: string;
   location: string;
@@ -284,6 +329,8 @@ export interface CreateTransactionInput {
   recipient: string;
   location?: string;
   amount: number;
+  fee?: number;
+  totalAmount?: number;
   currency?: string;
   transactionDate?: Date;
   transactionRefNo?: string;
@@ -294,6 +341,9 @@ export interface CreateTransactionInput {
   terminalId?: string;
   sourceOfFund?: string;
   sourceAccount?: string;
+  recipientBank?: string;
+  recipientBankAccount?: string;
+  transferPurpose?: string;
   bankSender?: string;
   emailSubject?: string;
   transactionType?: string;
@@ -305,6 +355,9 @@ export interface CreateTransactionInput {
 // Component prop types
 export interface WalletHeaderProps {
   hasWallets?: boolean;
+  selectedWalletIds?: string[];
+  wallets?: WalletWithBank[];
+  onClearSelection?: () => void;
 }
 
 export interface WalletSummaryProps {
@@ -321,14 +374,16 @@ export interface WalletFiltersProps {
   onCustomEndDateChange: (date: string) => void;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
-  recipientBank: BankFilterType;
-  onRecipientBankChange: (bank: BankFilterType) => void;
-  paymentMethod: PaymentMethodFilterType;
-  onPaymentMethodChange: (method: PaymentMethodFilterType) => void;
+  recipientBank: BankFilterValue;
+  onRecipientBankChange: (bank: BankFilterValue) => void;
+  paymentMethod: PaymentMethodFilterValue;
+  onPaymentMethodChange: (method: PaymentMethodFilterValue) => void;
   sortBy: SortByType;
   sortOrder: SortOrderType;
   onSortByChange: (sortBy: SortByType) => void;
   onSortOrderChange: (sortOrder: SortOrderType) => void;
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
   totalCount: number;
   dateRange: DateRange;
 }
@@ -341,14 +396,18 @@ export interface TransactionListProps {
   onPageChange: (page: number) => void;
   isLoading: boolean;
   hasWallets?: boolean;
+  selectedWalletIds?: string[];
+  wallets?: WalletWithBank[];
   formatCurrency: (amount: string) => string;
   formatDate: (date: Date) => string;
+  onEditTransaction?: (transaction: TransactionResponse) => void;
 }
 
 export interface TransactionItemProps {
   transaction: TransactionResponse;
   formatCurrency: (amount: string) => string;
   formatDate: (date: Date) => string;
+  onEdit?: (transaction: TransactionResponse) => void;
 }
 
 export interface DateFilterProps {

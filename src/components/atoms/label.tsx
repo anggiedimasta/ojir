@@ -8,9 +8,9 @@ interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
 const Label = forwardRef<HTMLLabelElement, LabelProps>(
   ({ className, variant = 'default', children, ...props }, ref) => {
     const variants = {
-      default: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-      required: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 after:content-['*'] after:ml-0.5 after:text-red-500",
-      optional: "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground"
+      default: "text-sm font-medium leading-none text-gray-900 peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+      required: "text-sm font-medium leading-none text-gray-900 peer-disabled:cursor-not-allowed peer-disabled:opacity-70 after:content-['*'] after:ml-0.5 after:text-red-500",
+      optional: "text-sm font-medium leading-none text-gray-500 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
     };
 
     return (

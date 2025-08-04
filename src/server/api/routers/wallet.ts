@@ -5,6 +5,14 @@ import { eq, and, gte, lte, desc, sql, asc, ilike, or, isNull, SQL, inArray } fr
 import { fetchGmailMessages, parseTransactionEmail, setupGmailPushNotifications, stopGmailPushNotifications } from "~/server/api/gmail";
 import type { TransactionSummary } from "~/entities/api/wallet";
 
+// Custom error class for auth errors that should trigger sign-out
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
 // Helper function to safely create OR conditions
 const createOrCondition = (conditions: (SQL<unknown> | undefined)[]): SQL<unknown> | undefined => {
   const validConditions = conditions.filter(Boolean) as SQL<unknown>[];
@@ -333,9 +341,10 @@ export const walletRouter = createTRPCRouter({
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         searchQuery: z.string().optional(),
-        recipientBank: z.enum(['all', 'mandiri', 'bca', 'bni', 'bri', 'cimb', 'other']).optional(),
-        paymentMethod: z.enum(['all', 'qris', 'transfer', 'virtual-account', 'bi-fast', 'other']).optional(),
+        recipientBank: z.array(z.enum(['all', 'mandiri', 'bca', 'bni', 'bri', 'cimb', 'other'])).optional(),
+        paymentMethod: z.array(z.enum(['all', 'qris', 'transfer', 'virtual-account', 'bi-fast', 'other'])).optional(),
         walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
         sortBy: z.enum(['date', 'amount', 'recipient']).optional(),
         sortOrder: z.enum(['asc', 'desc']).optional(),
         limit: z.number().min(1).max(100).default(10),
@@ -353,8 +362,10 @@ export const walletRouter = createTRPCRouter({
         conditions.push(lte(transactions.transactionDate, input.endDate));
       }
 
-      // Wallet filter
-      if (input.walletId) {
+      // Wallet filter - support single walletId or multiple walletIds
+      if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      } else if (input.walletId) {
         conditions.push(eq(transactions.walletId, input.walletId));
       }
 
@@ -373,50 +384,63 @@ export const walletRouter = createTRPCRouter({
         }
       }
 
-      // Bank filter
-      if (input.recipientBank && input.recipientBank !== 'all') {
-        if (input.recipientBank === 'other') {
-          const bankCondition = createOrCondition([
-            isNull(transactions.bankSender),
-            sql`${transactions.bankSender} NOT IN ('mandiri', 'bca', 'bni', 'bri', 'cimb')`
-          ]);
+      // Bank filter - support multiple selections
+      if (input.recipientBank && input.recipientBank.length > 0 && !input.recipientBank.includes('all')) {
+        const bankConditions: SQL<unknown>[] = [];
 
-          if (bankCondition) {
-            conditions.push(bankCondition);
+        for (const bank of input.recipientBank) {
+          if (bank === 'other') {
+            const otherBankCondition = createOrCondition([
+              isNull(transactions.bankSender),
+              sql`${transactions.bankSender} NOT IN ('mandiri', 'bca', 'bni', 'bri', 'cimb')`
+            ]);
+            if (otherBankCondition) {
+              bankConditions.push(otherBankCondition);
+            }
+          } else {
+            bankConditions.push(ilike(transactions.bankSender, `%${bank}%`));
           }
-        } else {
-          conditions.push(ilike(transactions.bankSender, `%${input.recipientBank}%`));
+        }
+
+        if (bankConditions.length > 0) {
+          conditions.push(createOrCondition(bankConditions) || sql`1=0`);
         }
       }
 
-      // Payment method filter
-      if (input.paymentMethod && input.paymentMethod !== 'all') {
-        if (input.paymentMethod === 'qris') {
-          conditions.push(sql`${transactions.qrisRefNo} IS NOT NULL`);
-        } else if (input.paymentMethod === 'transfer') {
-          const transferCondition = createOrCondition([
-            ilike(transactions.transactionType, '%transfer%'),
-            ilike(transactions.transactionType, '%bi-fast%')
-          ]);
+      // Payment method filter - support multiple selections
+      if (input.paymentMethod && input.paymentMethod.length > 0 && !input.paymentMethod.includes('all')) {
+        const methodConditions: SQL<unknown>[] = [];
 
-          if (transferCondition) {
-            conditions.push(transferCondition);
+        for (const method of input.paymentMethod) {
+          if (method === 'qris') {
+            methodConditions.push(sql`${transactions.qrisRefNo} IS NOT NULL`);
+          } else if (method === 'transfer') {
+            const transferCondition = createOrCondition([
+              ilike(transactions.transactionType, '%transfer%'),
+              ilike(transactions.transactionType, '%bi-fast%')
+            ]);
+            if (transferCondition) {
+              methodConditions.push(transferCondition);
+            }
+          } else if (method === 'virtual-account') {
+            methodConditions.push(sql`${transactions.virtualAccountNo} IS NOT NULL`);
+          } else if (method === 'bi-fast') {
+            methodConditions.push(ilike(transactions.transactionType, '%bi-fast%'));
+          } else if (method === 'other') {
+            const otherCondition = createAndCondition([
+              isNull(transactions.qrisRefNo),
+              isNull(transactions.virtualAccountNo),
+              sql`${transactions.transactionType} NOT LIKE '%transfer%'`,
+              sql`${transactions.transactionType} NOT LIKE '%bi-fast%'`
+            ]);
+            if (otherCondition) {
+              methodConditions.push(otherCondition);
+            }
           }
-        } else if (input.paymentMethod === 'virtual-account') {
-          conditions.push(sql`${transactions.virtualAccountNo} IS NOT NULL`);
-        } else if (input.paymentMethod === 'bi-fast') {
-          conditions.push(ilike(transactions.transactionType, '%bi-fast%'));
-        } else if (input.paymentMethod === 'other') {
-          const otherCondition = createAndCondition([
-            isNull(transactions.qrisRefNo),
-            isNull(transactions.virtualAccountNo),
-            sql`${transactions.transactionType} NOT LIKE '%transfer%'`,
-            sql`${transactions.transactionType} NOT LIKE '%bi-fast%'`
-          ]);
+        }
 
-          if (otherCondition) {
-            conditions.push(otherCondition);
-          }
+        if (methodConditions.length > 0) {
+          conditions.push(createOrCondition(methodConditions) || sql`1=0`);
         }
       }
 
@@ -450,10 +474,15 @@ export const walletRouter = createTRPCRouter({
           recipient: transactions.recipient,
           location: transactions.location,
           amount: transactions.amount,
+          fee: transactions.fee,
+          totalAmount: transactions.totalAmount,
           currency: transactions.currency,
           transactionDate: transactions.transactionDate,
           sourceOfFund: transactions.sourceOfFund,
           sourceAccount: transactions.sourceAccount,
+          recipientBank: transactions.recipientBank,
+          recipientBankAccount: transactions.recipientBankAccount,
+          transferPurpose: transactions.transferPurpose,
           acquirer: transactions.acquirer,
           bankSender: transactions.bankSender,
           emailSubject: transactions.emailSubject,
@@ -468,6 +497,7 @@ export const walletRouter = createTRPCRouter({
           walletType: wallets.type,
           walletBankCode: wallets.bankCode,
           walletBankName: banks.name,
+          walletColor: wallets.color,
         })
         .from(transactions)
         .leftJoin(wallets, eq(transactions.walletId, wallets.id))
@@ -487,9 +517,10 @@ export const walletRouter = createTRPCRouter({
         startDate: z.date().optional(),
         endDate: z.date().optional(),
         searchQuery: z.string().optional(),
-        recipientBank: z.enum(['all', 'mandiri', 'bca', 'bni', 'bri', 'cimb', 'other']).optional(),
-        paymentMethod: z.enum(['all', 'qris', 'transfer', 'virtual-account', 'bi-fast', 'other']).optional(),
+        recipientBank: z.array(z.enum(['all', 'mandiri', 'bca', 'bni', 'bri', 'cimb', 'other'])).optional(),
+        paymentMethod: z.array(z.enum(['all', 'qris', 'transfer', 'virtual-account', 'bi-fast', 'other'])).optional(),
         walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -503,8 +534,10 @@ export const walletRouter = createTRPCRouter({
         conditions.push(lte(transactions.transactionDate, input.endDate));
       }
 
-      // Wallet filter
-      if (input.walletId) {
+      // Wallet filter - support single walletId or multiple walletIds
+      if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      } else if (input.walletId) {
         conditions.push(eq(transactions.walletId, input.walletId));
       }
 
@@ -523,50 +556,63 @@ export const walletRouter = createTRPCRouter({
         }
       }
 
-      // Bank filter
-      if (input.recipientBank && input.recipientBank !== 'all') {
-        if (input.recipientBank === 'other') {
-          const bankCondition = createOrCondition([
-            isNull(transactions.bankSender),
-            sql`${transactions.bankSender} NOT IN ('mandiri', 'bca', 'bni', 'bri', 'cimb')`
-          ]);
+      // Bank filter - support multiple selections
+      if (input.recipientBank && input.recipientBank.length > 0 && !input.recipientBank.includes('all')) {
+        const bankConditions: SQL<unknown>[] = [];
 
-          if (bankCondition) {
-            conditions.push(bankCondition);
+        for (const bank of input.recipientBank) {
+          if (bank === 'other') {
+            const otherBankCondition = createOrCondition([
+              isNull(transactions.bankSender),
+              sql`${transactions.bankSender} NOT IN ('mandiri', 'bca', 'bni', 'bri', 'cimb')`
+            ]);
+            if (otherBankCondition) {
+              bankConditions.push(otherBankCondition);
+            }
+          } else {
+            bankConditions.push(ilike(transactions.bankSender, `%${bank}%`));
           }
-        } else {
-          conditions.push(ilike(transactions.bankSender, `%${input.recipientBank}%`));
+        }
+
+        if (bankConditions.length > 0) {
+          conditions.push(createOrCondition(bankConditions) || sql`1=0`);
         }
       }
 
-      // Payment method filter
-      if (input.paymentMethod && input.paymentMethod !== 'all') {
-        if (input.paymentMethod === 'qris') {
-          conditions.push(sql`${transactions.qrisRefNo} IS NOT NULL`);
-        } else if (input.paymentMethod === 'transfer') {
-          const transferCondition = createOrCondition([
-            ilike(transactions.transactionType, '%transfer%'),
-            ilike(transactions.transactionType, '%bi-fast%')
-          ]);
+      // Payment method filter - support multiple selections
+      if (input.paymentMethod && input.paymentMethod.length > 0 && !input.paymentMethod.includes('all')) {
+        const methodConditions: SQL<unknown>[] = [];
 
-          if (transferCondition) {
-            conditions.push(transferCondition);
+        for (const method of input.paymentMethod) {
+          if (method === 'qris') {
+            methodConditions.push(sql`${transactions.qrisRefNo} IS NOT NULL`);
+          } else if (method === 'transfer') {
+            const transferCondition = createOrCondition([
+              ilike(transactions.transactionType, '%transfer%'),
+              ilike(transactions.transactionType, '%bi-fast%')
+            ]);
+            if (transferCondition) {
+              methodConditions.push(transferCondition);
+            }
+          } else if (method === 'virtual-account') {
+            methodConditions.push(sql`${transactions.virtualAccountNo} IS NOT NULL`);
+          } else if (method === 'bi-fast') {
+            methodConditions.push(ilike(transactions.transactionType, '%bi-fast%'));
+          } else if (method === 'other') {
+            const otherCondition = createAndCondition([
+              isNull(transactions.qrisRefNo),
+              isNull(transactions.virtualAccountNo),
+              sql`${transactions.transactionType} NOT LIKE '%transfer%'`,
+              sql`${transactions.transactionType} NOT LIKE '%bi-fast%'`
+            ]);
+            if (otherCondition) {
+              methodConditions.push(otherCondition);
+            }
           }
-        } else if (input.paymentMethod === 'virtual-account') {
-          conditions.push(sql`${transactions.virtualAccountNo} IS NOT NULL`);
-        } else if (input.paymentMethod === 'bi-fast') {
-          conditions.push(ilike(transactions.transactionType, '%bi-fast%'));
-        } else if (input.paymentMethod === 'other') {
-          const otherCondition = createAndCondition([
-            isNull(transactions.qrisRefNo),
-            isNull(transactions.virtualAccountNo),
-            sql`${transactions.transactionType} NOT LIKE '%transfer%'`,
-            sql`${transactions.transactionType} NOT LIKE '%bi-fast%'`
-          ]);
+        }
 
-          if (otherCondition) {
-            conditions.push(otherCondition);
-          }
+        if (methodConditions.length > 0) {
+          conditions.push(createOrCondition(methodConditions) || sql`1=0`);
         }
       }
 
@@ -679,7 +725,7 @@ export const walletRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.accessToken) {
-        throw new Error("No access token available. Please re-authenticate.");
+        throw new AuthError("No Gmail access token available. Please sign out and sign in again to refresh your credentials.");
       }
 
       // Check if user has at least one non-uncategorized wallet
@@ -776,6 +822,34 @@ export const walletRouter = createTRPCRouter({
               const existing = existingTransaction[0];
               if (existing) {
 
+                // Clean up sourceOfFund to prevent database constraint errors
+                let cleanSourceOfFund = parsedTransaction.sourceOfFund;
+                if (cleanSourceOfFund && (cleanSourceOfFund.includes('Save this email') || cleanSourceOfFund.includes('Thank you for using Livin'))) {
+                  // Extract just the part before the email footer
+                  const cleanMatch = cleanSourceOfFund.match(/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i);
+                  if (cleanMatch && cleanMatch[1]) {
+                    cleanSourceOfFund = cleanMatch[1].trim();
+                  } else {
+                    // Fallback: just take everything before "Save this email"
+                    const beforeFooter = cleanSourceOfFund.split('Save this email')[0];
+                    if (beforeFooter) {
+                      cleanSourceOfFund = beforeFooter.trim();
+                    }
+                  }
+                }
+
+                // Ensure sourceOfFund doesn't exceed database limit (255 characters)
+                if (cleanSourceOfFund && cleanSourceOfFund.length > 255) {
+                  // Try to extract just the essential part
+                  const essentialMatch = cleanSourceOfFund.match(/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i);
+                  if (essentialMatch && essentialMatch[1]) {
+                    cleanSourceOfFund = essentialMatch[1].trim();
+                  } else {
+                    // Last resort: truncate to 255 characters
+                    cleanSourceOfFund = cleanSourceOfFund.substring(0, 255).trim();
+                  }
+                }
+
                 // Update the existing transaction with all the newest data
                 await ctx.db
                   .update(transactions)
@@ -790,7 +864,7 @@ export const walletRouter = createTRPCRouter({
                     customerPan: parsedTransaction.customerPan,
                     acquirer: parsedTransaction.acquirer,
                     terminalId: parsedTransaction.terminalId,
-                    sourceOfFund: parsedTransaction.sourceOfFund,
+                    sourceOfFund: cleanSourceOfFund,
                     sourceAccount: parsedTransaction.sourceAccount,
                     bankSender: parsedTransaction.bankSender,
                     emailSubject: parsedTransaction.emailSubject,
@@ -1070,7 +1144,7 @@ export const walletRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       if (!ctx.accessToken) {
-        throw new Error("No access token available. Please re-authenticate.");
+        throw new AuthError("No Gmail access token available. Please sign out and sign in again to refresh your credentials.");
       }
 
       try {
@@ -1096,7 +1170,7 @@ export const walletRouter = createTRPCRouter({
   disableAutoSync: protectedProcedure
     .mutation(async ({ ctx }) => {
       if (!ctx.accessToken) {
-        throw new Error("No access token available. Please re-authenticate.");
+        throw new AuthError("No Gmail access token available. Please sign out and sign in again to refresh your credentials.");
       }
 
       try {
@@ -1196,5 +1270,145 @@ export const walletRouter = createTRPCRouter({
         console.error("Error remapping transactions:", error);
         throw new Error(`Failed to remap transactions: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
+    }),
+
+  // Update transaction
+  updateTransaction: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        recipient: z.string().min(1),
+        location: z.string().optional(),
+        amount: z.number().positive(),
+        fee: z.number().optional(),
+        totalAmount: z.number().optional(),
+        currency: z.string().min(1),
+        transactionDate: z.date(),
+        direction: z.enum(["in", "out"]),
+        walletId: z.string().min(1),
+        recipientBank: z.string().optional(),
+        recipientBankAccount: z.string().optional(),
+        transferPurpose: z.string().optional(),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the transaction belongs to the user
+      const existingTransaction = await ctx.db
+        .select()
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.id, input.id),
+            eq(transactions.userId, ctx.session.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!existingTransaction[0]) {
+        throw new Error("Transaction not found or you don't have permission to edit it");
+      }
+
+      // Verify the wallet belongs to the user
+      const wallet = await ctx.db
+        .select()
+        .from(wallets)
+        .where(
+          and(
+            eq(wallets.id, input.walletId),
+            eq(wallets.userId, ctx.session.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!wallet[0]) {
+        throw new Error("Selected wallet not found or you don't have permission to use it");
+      }
+
+      // Update the transaction
+      const updatedTransaction = await ctx.db
+        .update(transactions)
+        .set({
+          recipient: input.recipient,
+          location: input.location,
+          amount: input.amount.toString(),
+          fee: input.fee ? input.fee.toString() : "0.00",
+          totalAmount: input.totalAmount ? input.totalAmount.toString() : input.amount.toString(),
+          currency: input.currency,
+          transactionDate: input.transactionDate,
+          direction: input.direction,
+          walletId: input.walletId,
+          recipientBank: input.recipientBank,
+          recipientBankAccount: input.recipientBankAccount,
+          transferPurpose: input.transferPurpose,
+          // Note: We're not updating system-generated fields like transactionRefNo, qrisRefNo, etc.
+          // Only user-editable fields are updated
+        })
+        .where(eq(transactions.id, input.id))
+        .returning();
+
+      return updatedTransaction[0];
+    }),
+
+  // Bulk update transactions wallet assignment
+  bulkUpdateTransactionWallets: protectedProcedure
+    .input(
+      z.object({
+        walletId: z.string().min(1),
+        transactionIds: z.array(z.string()).min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify the wallet belongs to the user
+      const wallet = await ctx.db
+        .select()
+        .from(wallets)
+        .where(
+          and(
+            eq(wallets.id, input.walletId),
+            eq(wallets.userId, ctx.session.user.id)
+          )
+        )
+        .limit(1);
+
+      if (!wallet[0]) {
+        throw new Error("Selected wallet not found or you don't have permission to use it");
+      }
+
+      // Verify all transactions belong to the user
+      const existingTransactions = await ctx.db
+        .select({ id: transactions.id })
+        .from(transactions)
+        .where(
+          and(
+            inArray(transactions.id, input.transactionIds),
+            eq(transactions.userId, ctx.session.user.id)
+          )
+        );
+
+      if (existingTransactions.length !== input.transactionIds.length) {
+        throw new Error("Some transactions not found or you don't have permission to edit them");
+      }
+
+      // Update all transactions to the new wallet
+      const updatedTransactions = await ctx.db
+        .update(transactions)
+        .set({
+          walletId: input.walletId,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(transactions.id, input.transactionIds),
+            eq(transactions.userId, ctx.session.user.id)
+          )
+        )
+        .returning({ id: transactions.id });
+
+      return {
+        success: true,
+        updatedCount: updatedTransactions.length,
+        message: `Successfully moved ${updatedTransactions.length} transactions to ${wallet[0].name}`,
+      };
     }),
 });

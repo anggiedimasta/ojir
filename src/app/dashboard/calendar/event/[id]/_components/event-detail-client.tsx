@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSidebarStore } from '~/store/sidebar-store'
+import { useSidebarStoreHydrated } from '~/store/sidebar-store'
 import { Button } from '~/components/ui/button'
 import { Card } from '~/components/ui/card'
 import { useToast } from '~/components/ui/use-toast'
@@ -56,7 +56,7 @@ function hasStatus(event: CalendarEventResponse): event is CalendarEventResponse
 }
 
 export function EventDetailClient({ eventId }: EventDetailClientProps) {
-  const { isCollapsed } = useSidebarStore()
+  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated()
   const { toast } = useToast()
   const router = useRouter()
 

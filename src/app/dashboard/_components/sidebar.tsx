@@ -4,12 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Calendar, User, Settings, ChevronLeft, ChevronRight, Home, Wallet } from "lucide-react";
 import Image from "next/image";
-import { useSidebarStore } from "../../../store/sidebar-store";
+import { useSidebarStoreHydrated } from "../../../store/sidebar-store";
 import { useEffect, useState } from 'react'
 import { Button } from "~/components/ui/button";
 
 export function Sidebar() {
-  const { isCollapsed, setCollapsed } = useSidebarStore();
+  const { isCollapsed, setCollapsed, hasHydrated } = useSidebarStoreHydrated();
   const [hasMounted, setHasMounted] = useState(false)
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { BarChart3, Calendar, FileText, Users } from "lucide-react";
 import type { Session } from "next-auth";
 import dynamic from 'next/dynamic';
 import { useState, useEffect } from 'react';
-import { useSidebarStore } from "../../../store/sidebar-store";
+import { useSidebarStoreHydrated } from "../../../store/sidebar-store";
 
 // Lazy load charts
 const LazyAreaChart = dynamic(() => import('@tremor/react').then(mod => mod.AreaChart), { ssr: false });
@@ -73,7 +73,7 @@ const engagementData = [
 ];
 
 export function DashboardContent({ user }: DashboardContentProps) {
-  const { isCollapsed } = useSidebarStore();
+  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
   const [hasMounted, setHasMounted] = useState(false);
   const [isChartsVisible, setIsChartsVisible] = useState(false);
 
@@ -86,7 +86,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
     return () => clearTimeout(timer);
   }, []);
 
-  if (!hasMounted) return null;
+  if (!hasMounted || !hasHydrated) return null;
 
   const stats: Stat[] = [
     {

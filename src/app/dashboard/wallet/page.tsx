@@ -1,28 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSidebarStore, useWalletFiltersStore, useLoadingStore } from "~/store";
-import { useToast } from "~/components/ui/use-toast";
+import { signOut } from "next-auth/react";
+import { useSidebarStoreHydrated, useWalletFiltersStore, useLoadingStore } from "~/store";
 import { api } from "~/trpc/react";
 import { WalletHeader } from "~/components/wallet/wallet-header";
 import { WalletSummary } from "~/components/wallet/wallet-summary";
 import { WalletFilters } from "~/components/wallet/wallet-filters";
 import { TransactionList } from "~/components/wallet/transaction-list";
 import { WalletList } from "~/components/wallet/wallet-list";
-import { WalletForm } from "~/components/wallet/wallet-form";
-import { Modal } from "~/components/ui/modal";
+import { TransactionEditForm } from "~/components/wallet/transaction-edit-form";
+import { WalletFormModal } from "~/components/wallet/wallet-form-modal";
+import { BulkUpdateModal } from "~/components/wallet/bulk-update-modal";
+import { useWalletManagement } from "~/hooks/use-wallet-management";
+import { useBulkUpdate } from "~/hooks/use-bulk-update";
+import { useTransactionManagement } from "~/hooks/use-transaction-management";
+import { formatCurrency, formatDate } from "~/utils/formatters";
 
 import type { DateRange } from "~/entities/api/wallet";
 
 export default function WalletPage() {
-  const { isCollapsed } = useSidebarStore();
-  const { toast } = useToast();
+  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
   const { isLoading, setLoading } = useLoadingStore();
 
-  // Wallet management state
-  const [showWalletForm, setShowWalletForm] = useState(false);
-  const [editingWallet, setEditingWallet] = useState<any | null>(null);
+  // Wallet selection state
   const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
+
+  // Custom hooks
+  const walletManagement = useWalletManagement();
+  const bulkUpdate = useBulkUpdate();
+  const transactionManagement = useTransactionManagement();
 
   // Use global wallet filters store
   const {
@@ -45,6 +52,7 @@ export default function WalletPage() {
     currentPage,
     setCurrentPage,
     pageSize,
+    setPageSize,
   } = useWalletFiltersStore();
 
   // Calculate date ranges
@@ -94,7 +102,7 @@ export default function WalletPage() {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(0);
-  }, [dateFilter, customStartDate, customEndDate, searchQuery, recipientBank, paymentMethod, sortBy, sortOrder]);
+  }, [dateFilter, customStartDate, customEndDate, searchQuery, recipientBank, paymentMethod, sortBy, sortOrder, pageSize, selectedWalletIds]);
 
   // Get transactions with server-side filtering, sorting, and pagination
   const { data: transactions, refetch: refetchTransactions } = api.wallet.getTransactions.useQuery({
@@ -107,6 +115,9 @@ export default function WalletPage() {
     paymentMethod: paymentMethod,
     sortBy: sortBy,
     sortOrder: sortOrder,
+    walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+  }, {
+    enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
   });
 
   // Get total count for pagination
@@ -116,6 +127,9 @@ export default function WalletPage() {
     searchQuery: searchQuery.trim() || undefined,
     recipientBank: recipientBank,
     paymentMethod: paymentMethod,
+    walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+  }, {
+    enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
   });
 
   // Get summary with date filtering and selected wallets
@@ -123,6 +137,8 @@ export default function WalletPage() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
     walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+  }, {
+    enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
   });
 
   // Get user wallets
@@ -131,13 +147,13 @@ export default function WalletPage() {
   // Check if user has any non-uncategorized wallets
   const hasWallets = walletsData.some(wallet => wallet.name !== 'Uncategorized');
 
-  // Set all wallets as selected by default
+  // Set all wallets as selected by default (only on initial load)
   useEffect(() => {
     if (walletsData.length > 0 && selectedWalletIds.length === 0) {
       const allWalletIds = walletsData.map(wallet => wallet.id);
       setSelectedWalletIds(allWalletIds);
     }
-  }, [walletsData, selectedWalletIds.length]);
+  }, [walletsData]); // Remove selectedWalletIds.length dependency to allow empty selection
 
   // Auto-resync effect - runs when wallets are updated or on initial load
   useEffect(() => {
@@ -157,67 +173,6 @@ export default function WalletPage() {
   // Get tRPC utils for query invalidation
   const utils = api.useUtils();
 
-
-
-  // Wallet management mutations
-  const createWalletMutation = api.wallet.createWallet.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Wallet Created",
-        description: "Your wallet has been created successfully.",
-      });
-      setShowWalletForm(false);
-      setEditingWallet(null);
-      // Invalidate and refetch wallet queries
-      api.useUtils().wallet.getWallets.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Create Wallet",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateWalletMutation = api.wallet.updateWallet.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Wallet Updated",
-        description: "Your wallet has been updated successfully.",
-      });
-      setShowWalletForm(false);
-      setEditingWallet(null);
-      // Invalidate and refetch wallet queries
-      api.useUtils().wallet.getWallets.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Update Wallet",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteWalletMutation = api.wallet.deleteWallet.useMutation({
-    onSuccess: () => {
-      toast({
-        title: "Wallet Deleted",
-        description: "Your wallet has been deleted successfully.",
-      });
-      // Invalidate and refetch wallet queries
-      api.useUtils().wallet.getWallets.invalidate();
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Delete Wallet",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   // Auto-resync mutation
   const autoResyncMutation = api.wallet.syncTransactions.useMutation({
     onMutate: () => {
@@ -236,6 +191,7 @@ export default function WalletPage() {
         paymentMethod: paymentMethod,
         sortBy: sortBy,
         sortOrder: sortOrder,
+        walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
       });
 
       utils.wallet.getTransactionCount.invalidate({
@@ -244,6 +200,7 @@ export default function WalletPage() {
         searchQuery: searchQuery.trim() || undefined,
         recipientBank: recipientBank,
         paymentMethod: paymentMethod,
+        walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
       });
 
       utils.wallet.getSummary.invalidate({
@@ -253,22 +210,17 @@ export default function WalletPage() {
       });
 
       utils.wallet.getWallets.invalidate();
-
-      // Show success toast if there were changes
-      if (data.newTransactions > 0 || data.remappedTransactions > 0) {
-        toast({
-          title: "Sync Completed",
-          description: `${data.newTransactions} new transactions imported, ${data.remappedTransactions} transactions remapped to correct wallets.`,
-        });
-      }
     },
     onError: (error) => {
       console.error("Auto-resync failed:", error);
-      toast({
-        title: "Sync Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+
+      // Check if it's an auth error and automatically sign out
+      if (error.message.includes('Gmail access token') || error.message.includes('Invalid Credentials') || error.message.includes('access_denied')) {
+        // Sign out after a short delay
+        setTimeout(() => {
+          signOut({ callbackUrl: "/signin" });
+        }, 2000);
+      }
     },
     onSettled: () => {
       // Clear global loading when sync completes (success or error)
@@ -276,124 +228,56 @@ export default function WalletPage() {
     },
   });
 
-  // Wallet management handlers
-  const handleAddWallet = () => {
-    setEditingWallet(null);
-    setShowWalletForm(true);
+  const handleWalletSelectionChange = (newSelectedIds: string[]) => {
+    // Simple wallet selection without bulk update
+    setSelectedWalletIds(newSelectedIds);
   };
 
-  const handleEditWallet = (wallet: any) => {
-    setEditingWallet(wallet);
-    setShowWalletForm(true);
+  const handleExportTransactions = () => {
+    // TODO: Implement export functionality
+    console.log('Export transactions');
   };
 
-  const handleDeleteWallet = async (walletId: string) => {
-    if (window.confirm('Are you sure you want to delete this wallet? This cannot be undone.')) {
-      await deleteWalletMutation.mutateAsync({ id: walletId });
-    }
-  };
-
-  const handleWalletSubmit = async (data: any) => {
-    if (editingWallet) {
-      await updateWalletMutation.mutateAsync(data);
-    } else {
-      await createWalletMutation.mutateAsync(data);
-    }
-  };
-
-  const handleCancelWalletForm = () => {
-    setShowWalletForm(false);
-    setEditingWallet(null);
-  };
-
-  const formatCurrency = (amount: string) => {
-    const num = parseFloat(amount);
-
-    // Handle negative numbers properly
-    const isNegative = num < 0;
-    const absNum = Math.abs(num);
-
-    const formatted = new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(absNum);
-
-    // Return with proper negative sign
-    return isNegative ? `-${formatted}` : formatted;
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(date));
-  };
+  // Don't render until hydration is complete
+  if (!hasHydrated) {
+    return (
+      <div className="transition-all duration-200 ease-out transform-gpu pl-72">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`transition-all duration-200 ease-out transform-gpu ${isCollapsed ? 'pl-20' : 'pl-72'}`}>
       <div className="min-h-screen">
         <div className="pt-2 pb-4 px-4 sm:pt-3 sm:pb-6 sm:px-6 lg:pt-4 lg:pb-8 lg:px-8">
-                      <WalletHeader
-              hasWallets={hasWallets}
-            />
+
 
           {/* Wallet Management Section */}
           <div className="mb-6">
-                         <WalletList
-               wallets={walletsData as any}
-               selectedWalletIds={selectedWalletIds}
-               onSelectWallets={setSelectedWalletIds}
-               onAddWallet={handleAddWallet}
-               onEditWallet={handleEditWallet}
-               onDeleteWallet={handleDeleteWallet}
-               isLoading={isLoading}
-             />
+            <WalletList
+              wallets={walletsData as any}
+              selectedWalletIds={selectedWalletIds}
+              onSelectWallets={handleWalletSelectionChange}
+              onAddWallet={walletManagement.handleAddWallet}
+              onEditWallet={walletManagement.handleEditWallet}
+              onDeleteWallet={walletManagement.handleDeleteWallet}
+              isLoading={isLoading}
+            />
           </div>
 
           {/* Wallet Form Modal */}
-          <Modal
-            isOpen={showWalletForm}
-            onClose={handleCancelWalletForm}
-            title={editingWallet ? 'Edit Wallet' : 'Create New Wallet'}
-            description={editingWallet ? 'Update your wallet information' : 'Add a new wallet to manage your transactions'}
-            size="2xl"
-            closeOnOverlayClick={true}
-            closeOnEscape={true}
-            footer={
-              <div className="flex gap-3 w-full">
-                                 <button
-                   type="button"
-                   onClick={handleCancelWalletForm}
-                   disabled={createWalletMutation.isPending || updateWalletMutation.isPending}
-                   className="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium py-2.5 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                 >
-                   Cancel
-                 </button>
-                 <button
-                   type="submit"
-                   form="wallet-form"
-                   disabled={createWalletMutation.isPending || updateWalletMutation.isPending}
-                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                 >
-                  {createWalletMutation.isPending || updateWalletMutation.isPending ? 'Saving...' : (editingWallet ? 'Update Wallet' : 'Create Wallet')}
-                </button>
-              </div>
-            }
-          >
-            <WalletForm
-              wallet={editingWallet}
-              banks={banksData as any}
-              onSubmit={handleWalletSubmit}
-              onCancel={handleCancelWalletForm}
-              isLoading={createWalletMutation.isPending || updateWalletMutation.isPending}
-            />
-          </Modal>
+          <WalletFormModal
+            isOpen={walletManagement.showWalletForm}
+            onClose={walletManagement.handleCancelWalletForm}
+            editingWallet={walletManagement.editingWallet}
+            banks={banksData as any}
+            onSubmit={walletManagement.handleWalletSubmit}
+            onCancel={walletManagement.handleCancelWalletForm}
+            isLoading={walletManagement.createWalletMutation.isPending || walletManagement.updateWalletMutation.isPending}
+          />
 
 
 
@@ -425,8 +309,13 @@ export default function WalletPage() {
             sortOrder={sortOrder}
             onSortByChange={setSortBy}
             onSortOrderChange={setSortOrder}
+            pageSize={pageSize}
+            onPageSizeChange={setPageSize}
             totalCount={totalCount || 0}
             dateRange={dateRange}
+            onSync={() => autoResyncMutation.mutate({ maxResults: 100 })}
+            isSyncPending={autoResyncMutation.isPending}
+            onExport={handleExportTransactions}
           />
 
           <TransactionList
@@ -437,9 +326,22 @@ export default function WalletPage() {
             onPageChange={setCurrentPage}
             isLoading={isLoading || autoResyncMutation.isPending}
             hasWallets={hasWallets}
+            selectedWalletIds={selectedWalletIds}
+            wallets={walletsData as any}
             formatCurrency={formatCurrency}
             formatDate={formatDate}
+            onEditTransaction={transactionManagement.handleEditTransaction}
           />
+
+          {/* Transaction Edit Form Modal */}
+          <TransactionEditForm
+            transaction={transactionManagement.editingTransaction}
+            isOpen={transactionManagement.showTransactionEditForm}
+            onClose={transactionManagement.handleCloseTransactionEditForm}
+            onSuccess={transactionManagement.handleTransactionEditSuccess}
+          />
+
+
         </div>
       </div>
     </div>
