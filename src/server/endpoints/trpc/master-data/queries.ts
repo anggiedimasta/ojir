@@ -1,9 +1,8 @@
-import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { banks, paymentMethods } from "~/server/db/schema";
+import { protectedProcedure } from "../../../api/trpc";
+import { banks } from "../../../db/schema";
 import { eq, asc } from "drizzle-orm";
 
-export const masterDataRouter = createTRPCRouter({
+export const masterDataQueries = {
   // Get all active banks
   getBanks: protectedProcedure.query(async ({ ctx }) => {
     try {
@@ -85,4 +84,4 @@ export const masterDataRouter = createTRPCRouter({
       }
     ];
   }),
-});
+};

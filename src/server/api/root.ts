@@ -1,18 +1,12 @@
-import { calendarRouter } from "~/server/api/routers/calendar";
-import { walletRouter } from "~/server/api/routers/wallet";
-import { masterDataRouter } from "~/server/api/routers/master-data";
-import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { appRouter } from "~/server/endpoints/trpc";
+import { createCallerFactory } from "~/server/api/trpc";
 
 /**
  * This is the primary router for your server.
  *
- * All routers added in /api/routers should be manually added here.
+ * All routers are now organized in /server/endpoints/trpc/.
  */
-export const appRouter = createTRPCRouter({
-  calendar: calendarRouter,
-  wallet: walletRouter,
-  masterData: masterDataRouter,
-});
+export { appRouter };
 
 // export type definition of API
 export type AppRouter = typeof appRouter;
