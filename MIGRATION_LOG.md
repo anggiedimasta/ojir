@@ -135,15 +135,30 @@ This document tracks the migration of the codebase from its current structure to
 **Priority: High | Estimated Time: 3-4 days**
 
 #### 2.1 Pages Organization
-- [ ] Create `src/pages/` structure:
-  - [ ] `src/pages/auth/` - Authentication pages
-  - [ ] `src/pages/dashboard/` - Dashboard pages
-  - [ ] `src/pages/wallet/` - Wallet pages
-  - [ ] `src/pages/calendar/` - Calendar pages
-  - [ ] `src/pages/settings/` - Settings pages
-  - [ ] `src/pages/error/` - Error pages
-- [ ] Move existing pages from `src/app/`
-- [ ] Update routing configuration
+**Status: COMPLETED** | **Started: 2024-12-19** | **Completed: 2024-12-19**
+
+- [x] Create `src/pages/` structure:
+  - [x] `src/pages/auth/` - Authentication pages
+  - [x] `src/pages/dashboard/` - Dashboard pages
+  - [x] `src/pages/wallet/` - Wallet pages
+  - [x] `src/pages/calendar/` - Calendar pages
+  - [x] `src/pages/settings/` - Settings pages
+  - [x] `src/pages/error/` - Error pages
+- [x] Move existing pages from `src/app/`
+- [x] Update routing configuration
+
+**Current Task**: Phase 2.1 completed, ready for Phase 2.2
+
+**Progress**:
+- ✅ Created new pages directory structure with organized subdirectories
+- ✅ Migrated authentication pages (signin) from app to pages structure
+- ✅ Migrated dashboard pages including layout and components
+- ✅ Migrated wallet pages with full functionality
+- ✅ Migrated calendar pages including all dynamic routes and components
+- ✅ Created error pages (404, 500) for better error handling
+- ✅ Updated routing paths in migrated components
+- ✅ Created home page in new pages structure
+- 🔄 Next: Phase 2.2 - Components Organization
 
 #### 2.2 Components Organization
 - [ ] Reorganize `src/components/`:
@@ -409,6 +424,17 @@ Total estimated time: 4 weeks
 - ✅ Created calendar enums for all calendar-related constants
 - ✅ Added comprehensive Zod schemas for calendar validation
 - 🔄 Next: Migrate API and UI domain types
+
+### 2024-12-19 - Phase 2.1 Pages Organization Completed
+- ✅ Created comprehensive pages directory structure with organized subdirectories
+- ✅ Migrated authentication pages (signin) with updated routing
+- ✅ Migrated dashboard pages including layout and all components
+- ✅ Migrated wallet pages with complete functionality
+- ✅ Migrated calendar pages including dynamic routes and view components
+- ✅ Created professional error pages (404, 500) for better UX
+- ✅ Updated all routing paths to use new pages structure
+- ✅ Created home page in new pages structure with updated links
+- 🔄 Next: Phase 2.2 - Components Organization
 
 ## Summary of Completed Work
 
