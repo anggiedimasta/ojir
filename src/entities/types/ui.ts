@@ -444,9 +444,9 @@ export type ReactNode = React.ReactNode;
 
 export type ReactElement = React.ReactElement;
 
-export type ReactChild = React.ReactChild;
+export type ReactChild = any; // React.ReactChild
 
-export type ReactChildren = React.ReactChildren;
+export type ReactChildren = any; // React.ReactChildren
 
 // CSS and Styling Types
 export type CSSProperties = React.CSSProperties;

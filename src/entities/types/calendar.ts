@@ -63,7 +63,7 @@ export type EventCategory =
 export type TimeZone = string; // e.g., 'America/New_York', 'Asia/Jakarta'
 
 // Date range types
-export type DateRange = {
+export type CalendarDateRange = {
   startDate: Date;
   endDate: Date;
 };
