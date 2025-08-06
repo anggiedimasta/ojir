@@ -323,8 +323,13 @@ export interface FileUploadProgress {
 export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 export interface ResponsiveValue<T> {
-  [K in Breakpoint]?: T;
   base: T;
+  xs?: T;
+  sm?: T;
+  md?: T;
+  lg?: T;
+  xl?: T;
+  '2xl'?: T;
 }
 
 // Animation and Transition Interfaces
@@ -471,11 +476,11 @@ export interface ReactElement {
 }
 
 export interface ReactChild {
-  child: React.ReactChild;
+  child: any; // React.ReactChild
 }
 
 export interface ReactChildren {
-  children: React.ReactChildren;
+  children: any; // React.ReactChildren
 }
 
 // CSS and Styling Interfaces

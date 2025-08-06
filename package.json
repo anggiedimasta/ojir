@@ -20,7 +20,6 @@
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "postinstall": "bun run db:generate",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

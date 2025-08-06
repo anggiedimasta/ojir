@@ -1,186 +1,146 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-// Calendar UI Schemas
-export const CalendarViewSchema = z.enum(['month', 'week', 'day', 'agenda']);
+// Base Schemas
+export const ResponsiveValueSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  z.object({
+    sm: valueSchema.optional(),
+    md: valueSchema.optional(),
+    lg: valueSchema.optional(),
+    xl: valueSchema.optional(),
+    "2xl": valueSchema.optional(),
+  });
 
-// Activity Type Schemas
-export const ActivityTypeSchema = z.enum([
-  'created',
-  'updated',
-  'deleted',
-  'completed',
-  'assigned',
-  'commented',
-  'uploaded',
-  'logged-in',
-  'logged-out'
-]);
+// React Component Schemas
+export const ComponentPropsSchema = z.object({
+  className: z.string().optional(),
+  style: z.any().optional(), // React.CSSProperties
+  children: z.any().optional(), // React.ReactNode
+  id: z.string().optional(),
+  "data-testid": z.string().optional(),
+});
 
-// Form Field Type Schemas
-export const FormFieldTypeSchema = z.enum([
-  'text',
-  'email',
-  'password',
-  'number',
-  'textarea',
-  'select',
-  'multiselect',
-  'checkbox',
-  'radio',
-  'date',
-  'datetime',
-  'file',
-  'toggle'
-]);
+// Button Schemas
+export const ButtonVariantSchema = z.enum(['default', 'destructive', 'outline', 'secondary', 'ghost', 'link']);
+export const ButtonSizeSchema = z.enum(['default', 'sm', 'lg', 'icon']);
+export const ButtonPropsSchema = ComponentPropsSchema.extend({
+  variant: ButtonVariantSchema.optional(),
+  size: ButtonSizeSchema.optional(),
+  disabled: z.boolean().optional(),
+  loading: z.boolean().optional(),
+  onClick: z.function().optional(),
+  type: z.enum(['button', 'submit', 'reset']).optional(),
+});
 
-// Button Variant Schemas
-export const ButtonVariantSchema = z.enum([
-  'primary',
-  'secondary',
-  'outline',
-  'ghost',
-  'destructive'
-]);
+// Input Schemas
+export const InputTypeSchema = z.enum(['text', 'email', 'password', 'number', 'tel', 'url', 'search', 'date', 'time', 'datetime-local']);
+export const InputPropsSchema = ComponentPropsSchema.extend({
+  type: InputTypeSchema.optional(),
+  placeholder: z.string().optional(),
+  value: z.union([z.string(), z.number()]).optional(),
+  defaultValue: z.union([z.string(), z.number()]).optional(),
+  required: z.boolean().optional(),
+  disabled: z.boolean().optional(),
+  readOnly: z.boolean().optional(),
+  min: z.union([z.string(), z.number()]).optional(),
+  max: z.union([z.string(), z.number()]).optional(),
+  step: z.union([z.string(), z.number()]).optional(),
+  pattern: z.string().optional(),
+  autoComplete: z.string().optional(),
+  autoFocus: z.boolean().optional(),
+  onChange: z.function().optional(),
+  onBlur: z.function().optional(),
+  onFocus: z.function().optional(),
+});
 
-export const ButtonSizeSchema = z.enum(['sm', 'md', 'lg']);
+// Form Schemas
+export const FormFieldSchema = z.object({
+  name: z.string(),
+  label: z.string().optional(),
+  type: InputTypeSchema.optional(),
+  placeholder: z.string().optional(),
+  required: z.boolean().optional(),
+  validation: z.any().optional(), // Zod schema
+  error: z.string().optional(),
+  helpText: z.string().optional(),
+});
 
-// Input Type Schemas
-export const InputTypeSchema = z.enum([
-  'text',
-  'email',
-  'password',
-  'number',
-  'tel',
-  'url'
-]);
+export const FormSchema = z.object({
+  fields: z.array(FormFieldSchema),
+  onSubmit: z.function().optional(),
+  onReset: z.function().optional(),
+  loading: z.boolean().optional(),
+  disabled: z.boolean().optional(),
+});
 
-export const InputSizeSchema = z.enum(['sm', 'md', 'lg']);
+// Modal Schemas
+export const ModalPropsSchema = ComponentPropsSchema.extend({
+  isOpen: z.boolean(),
+  onClose: z.function(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  size: z.enum(['sm', 'md', 'lg', 'xl', 'full']).optional(),
+  closeOnOverlayClick: z.boolean().optional(),
+  closeOnEscape: z.boolean().optional(),
+  showCloseButton: z.boolean().optional(),
+});
 
-// Modal Size Schemas
-export const ModalSizeSchema = z.enum(['small', 'medium', 'large', 'full']);
+// Table Schemas
+export const TableColumnSchema = z.object({
+  key: z.string(),
+  header: z.string(),
+  sortable: z.boolean().optional(),
+  width: z.union([z.string(), z.number()]).optional(),
+  align: z.enum(['left', 'center', 'right']).optional(),
+  render: z.function().optional(),
+});
 
-// Confirm Dialog Variant Schemas
-export const ConfirmDialogVariantSchema = z.enum(['danger', 'warning', 'info']);
+export const TablePropsSchema = ComponentPropsSchema.extend({
+  columns: z.array(TableColumnSchema),
+  data: z.array(z.any()),
+  loading: z.boolean().optional(),
+  emptyMessage: z.string().optional(),
+  sortable: z.boolean().optional(),
+  onSort: z.function().optional(),
+  pagination: z.any().optional(), // PaginationProps
+});
 
-// Theme Mode Schemas
-export const ThemeModeSchema = z.enum(['light', 'dark', 'system']);
+// Pagination Schemas
+export const PaginationPropsSchema = z.object({
+  currentPage: z.number(),
+  totalPages: z.number(),
+  totalItems: z.number(),
+  itemsPerPage: z.number().optional(),
+  onPageChange: z.function(),
+  showFirstLast: z.boolean().optional(),
+  showPrevNext: z.boolean().optional(),
+  showPageNumbers: z.boolean().optional(),
+  maxPageNumbers: z.number().optional(),
+});
 
-export const BorderRadiusSchema = z.enum(['none', 'small', 'medium', 'large']);
+// Loading Schemas
+export const LoadingStateSchema = z.enum(['idle', 'loading', 'success', 'error']);
+export const LoadingSpinnerPropsSchema = ComponentPropsSchema.extend({
+  size: z.enum(['sm', 'md', 'lg']).optional(),
+  color: z.string().optional(),
+  thickness: z.number().optional(),
+  speed: z.string().optional(),
+});
 
-export const SpacingSchema = z.enum(['compact', 'comfortable', 'spacious']);
+export const LoadingButtonPropsSchema = ButtonPropsSchema.extend({
+  loading: z.boolean().optional(),
+  loadingText: z.string().optional(),
+  loadingSpinner: z.boolean().optional(),
+});
 
-// Chart Type Schemas
-export const ChartTypeSchema = z.enum([
-  'line',
-  'bar',
-  'pie',
-  'donut',
-  'area',
-  'scatter'
-]);
-
-// Toast Type Schemas
-export const ToastTypeSchema = z.enum(['success', 'error', 'warning', 'info']);
-
-// Table Action Variant Schemas
-export const TableActionVariantSchema = z.enum(['primary', 'secondary', 'danger']);
-
-// Table Column Alignment Schemas
-export const TableColumnAlignSchema = z.enum(['left', 'center', 'right']);
-
-// Filter Option Type Schemas
-export const FilterOptionTypeSchema = z.enum(['text', 'select', 'date', 'number', 'boolean']);
-
-// File Upload Status Schemas
-export const FileUploadStatusSchema = z.enum(['pending', 'uploading', 'completed', 'error']);
-
-// Animation Type Schemas
-export const AnimationTypeSchema = z.enum(['fade', 'slide', 'scale', 'rotate', 'bounce']);
-
-export const AnimationDirectionSchema = z.enum(['in', 'out', 'both']);
-
-export const AnimationFillModeSchema = z.enum(['none', 'forwards', 'backwards', 'both']);
-
-export const AnimationPlayStateSchema = z.enum(['running', 'paused']);
-
-// Breakpoint Schemas
-export const BreakpointSchema = z.enum(['xs', 'sm', 'md', 'lg', 'xl', '2xl']);
-
-// Layout Direction Schemas
-export const LayoutDirectionSchema = z.enum(['ltr', 'rtl']);
-
-// Flex Direction Schemas
-export const FlexDirectionSchema = z.enum(['row', 'column', 'row-reverse', 'column-reverse']);
-
-// Justify Content Schemas
-export const JustifyContentSchema = z.enum([
-  'flex-start',
-  'flex-end',
-  'center',
-  'space-between',
-  'space-around',
-  'space-evenly'
-]);
-
-// Align Items Schemas
-export const AlignItemsSchema = z.enum(['flex-start', 'flex-end', 'center', 'baseline', 'stretch']);
-
-// Position Schemas
-export const PositionSchema = z.enum(['static', 'relative', 'absolute', 'fixed', 'sticky']);
-
-// Display Schemas
-export const DisplaySchema = z.enum(['block', 'inline', 'inline-block', 'flex', 'grid', 'none']);
-
-// Overflow Schemas
-export const OverflowSchema = z.enum(['visible', 'hidden', 'scroll', 'auto']);
-
-// Cursor Schemas
-export const CursorSchema = z.enum([
-  'auto',
-  'default',
-  'pointer',
-  'text',
-  'move',
-  'not-allowed',
-  'wait',
-  'help',
-  'crosshair',
-  'grab',
-  'grabbing'
-]);
-
-// User Select Schemas
-export const UserSelectSchema = z.enum(['auto', 'none', 'text', 'all', 'contain']);
-
-// Text Align Schemas
-export const TextAlignSchema = z.enum(['left', 'center', 'right', 'justify']);
-
-// Text Transform Schemas
-export const TextTransformSchema = z.enum(['none', 'capitalize', 'uppercase', 'lowercase']);
-
-// Text Decoration Schemas
-export const TextDecorationSchema = z.enum(['none', 'underline', 'overline', 'line-through']);
-
-// Border Style Schemas
-export const BorderStyleSchema = z.enum(['solid', 'dashed', 'dotted', 'double', 'none']);
-
-// Font Weight Schemas
-export const FontWeightSchema = z.enum(['normal', 'bold', 'bolder', 'lighter']);
-
-// Z-Index Schemas
-export const ZIndexSchema = z.enum(['auto']);
-
-// Transition Timing Function Schemas
-export const TransitionTimingFunctionSchema = z.enum([
-  'ease',
-  'linear',
-  'ease-in',
-  'ease-out',
-  'ease-in-out'
-]);
+export const LoadingOverlayPropsSchema = ComponentPropsSchema.extend({
+  loading: z.boolean(),
+  text: z.string().optional(),
+  backdrop: z.boolean().optional(),
+  spinner: z.boolean().optional(),
+});
 
 // Navigation and Menu Schemas
-export const MenuItemSchema = z.object({
+export const MenuItemSchema: z.ZodType<any> = z.object({
   id: z.string().optional(),
   title: z.string(),
   description: z.string().optional(),
@@ -207,392 +167,464 @@ export const StatCardSchema = z.object({
   id: z.string(),
   name: z.string(),
   value: z.union([z.string(), z.number()]),
+  change: z.number().optional(),
+  changeType: z.enum(['increase', 'decrease']).optional(),
   icon: z.any().optional(), // React.ReactNode
-  bgColor: z.string().optional(),
-  textColor: z.string().optional(),
-  trend: z.object({
-    value: z.number(),
-    direction: z.enum(['up', 'down', 'neutral']),
-    period: z.string(),
-  }).optional(),
-});
-
-export const ActivitySchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  time: z.string(),
-  type: ActivityTypeSchema,
-  icon: z.any().optional(), // React.ReactNode
-  user: z.object({
-    name: z.string(),
-    avatar: z.string().optional(),
-  }).optional(),
-});
-
-export const QuickActionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  icon: z.any(), // React.ReactNode
-  href: z.string().optional(),
-  onClick: z.function().optional(),
-  isDisabled: z.boolean().optional(),
-});
-
-// Form and Input Schemas
-export const FormFieldOptionSchema = z.object({
-  value: z.union([z.string(), z.number()]),
-  label: z.string(),
-  disabled: z.boolean().optional(),
-  icon: z.any().optional(), // React.ReactNode
-});
-
-export const FormFieldSchema = z.object({
-  name: z.string(),
-  label: z.string(),
-  type: FormFieldTypeSchema,
-  placeholder: z.string().optional(),
-  defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
-  required: z.boolean().optional(),
-  disabled: z.boolean().optional(),
-  options: z.array(FormFieldOptionSchema).optional(),
-  validation: z.object({
-    min: z.number().optional(),
-    max: z.number().optional(),
-    pattern: z.string().optional(),
-    message: z.string().optional(),
-  }).optional(),
-});
-
-// Table and List Schemas
-export const TableColumnSchema = z.object({
-  key: z.string(),
-  title: z.string(),
-  width: z.union([z.number(), z.string()]).optional(),
-  sortable: z.boolean().optional(),
-  filterable: z.boolean().optional(),
-  render: z.function().optional(),
-  align: TableColumnAlignSchema.optional(),
-});
-
-export const TableActionSchema = z.object({
-  key: z.string(),
-  label: z.string(),
-  icon: z.any().optional(), // React.ReactNode
-  onClick: z.function(),
-  isVisible: z.function().optional(),
-  isDisabled: z.function().optional(),
-  variant: TableActionVariantSchema.optional(),
-});
-
-export const FilterOptionSchema = z.object({
-  key: z.string(),
-  label: z.string(),
-  type: FilterOptionTypeSchema,
-  options: z.array(z.object({
-    value: z.union([z.string(), z.number(), z.boolean()]),
-    label: z.string(),
-  })).optional(),
-  defaultValue: z.union([z.string(), z.number(), z.boolean()]).optional(),
-});
-
-// Modal and Dialog Schemas
-export const ModalPropsSchema = z.object({
-  isOpen: z.boolean(),
-  onClose: z.function(),
-  title: z.string(),
-  size: ModalSizeSchema.optional(),
-  showCloseButton: z.boolean().optional(),
-  closeOnOverlayClick: z.boolean().optional(),
-  closeOnEscapeKey: z.boolean().optional(),
-});
-
-export const ConfirmDialogPropsSchema = ModalPropsSchema.extend({
-  message: z.string(),
-  confirmText: z.string().optional(),
-  cancelText: z.string().optional(),
-  variant: ConfirmDialogVariantSchema.optional(),
-  onConfirm: z.function(),
-  onCancel: z.function().optional(),
-});
-
-// Theme and Styling Schemas
-export const ThemeConfigSchema = z.object({
-  mode: ThemeModeSchema,
-  primaryColor: z.string(),
-  fontFamily: z.string(),
-  borderRadius: BorderRadiusSchema,
-  spacing: SpacingSchema,
-});
-
-export const ColorPaletteSchema = z.object({
-  primary: z.string(),
-  secondary: z.string(),
-  success: z.string(),
-  warning: z.string(),
-  error: z.string(),
-  info: z.string(),
-  background: z.string(),
-  surface: z.string(),
-  text: z.string(),
-  textSecondary: z.string(),
-  border: z.string(),
-});
-
-// Chart and Visualization Schemas
-export const ChartDataPointSchema = z.object({
-  label: z.string(),
-  value: z.number(),
   color: z.string().optional(),
-  category: z.string().optional(),
 });
 
-export const ChartConfigSchema = z.object({
-  type: ChartTypeSchema,
-  data: z.array(ChartDataPointSchema),
-  xAxisLabel: z.string().optional(),
-  yAxisLabel: z.string().optional(),
-  showLegend: z.boolean().optional(),
-  showGrid: z.boolean().optional(),
-  colors: z.array(z.string()).optional(),
-  height: z.number().optional(),
-  width: z.number().optional(),
-});
-
-// Component Props Schemas
-export const ButtonPropsSchema = z.object({
-  variant: ButtonVariantSchema.optional(),
-  size: ButtonSizeSchema.optional(),
-  disabled: z.boolean().optional(),
-  loading: z.boolean().optional(),
-  children: z.any(), // React.ReactNode
-  onClick: z.function().optional(),
-  type: z.enum(['button', 'submit', 'reset']).optional(),
-  className: z.string().optional(),
-});
-
-export const InputPropsSchema = z.object({
-  name: z.string(),
-  label: z.string().optional(),
-  placeholder: z.string().optional(),
-  type: InputTypeSchema.optional(),
-  required: z.boolean().optional(),
-  disabled: z.boolean().optional(),
-  error: z.string().optional(),
-  value: z.string().optional(),
-  onChange: z.function().optional(),
-  className: z.string().optional(),
-});
-
-export const SelectPropsSchema = z.object({
-  name: z.string(),
-  label: z.string().optional(),
-  placeholder: z.string().optional(),
-  options: z.array(z.object({
-    value: z.union([z.string(), z.number()]),
+export const ChartDataSchema = z.object({
+  labels: z.array(z.string()),
+  datasets: z.array(z.object({
     label: z.string(),
+    data: z.array(z.number()),
+    backgroundColor: z.union([z.string(), z.array(z.string())]).optional(),
+    borderColor: z.union([z.string(), z.array(z.string())]).optional(),
+    borderWidth: z.number().optional(),
   })),
-  required: z.boolean().optional(),
-  disabled: z.boolean().optional(),
-  error: z.string().optional(),
-  value: z.union([z.string(), z.number()]).optional(),
-  onChange: z.function().optional(),
-  className: z.string().optional(),
 });
 
-// Loading and State Schemas
-export const LoadingStateSchema = z.object({
-  isLoading: z.boolean(),
-  isFetching: z.boolean().optional(),
-  error: z.string().nullable().optional(),
-  data: z.any().optional(),
+export const ChartPropsSchema = ComponentPropsSchema.extend({
+  data: ChartDataSchema,
+  type: z.enum(['line', 'bar', 'pie', 'doughnut', 'radar', 'polarArea']).optional(),
+  options: z.any().optional(), // Chart.js options
+  height: z.union([z.string(), z.number()]).optional(),
+  width: z.union([z.string(), z.number()]).optional(),
 });
 
-export const RequestLoadingStateSchema = z.record(z.object({
-  isLoading: z.boolean(),
-  isFetching: z.boolean().optional(),
-  error: z.string().nullable().optional(),
-  startTime: z.number().optional(),
-}));
-
-// Notification and Toast Schemas
+// Toast and Notification Schemas
+export const ToastTypeSchema = z.enum(['success', 'error', 'warning', 'info']);
 export const ToastPropsSchema = z.object({
   id: z.string(),
   type: ToastTypeSchema,
   title: z.string(),
   description: z.string().optional(),
   duration: z.number().optional(),
-  action: z.object({
-    label: z.string(),
-    onClick: z.function(),
-  }).optional(),
+  action: z.any().optional(), // React.ReactNode
+  onClose: z.function().optional(),
 });
 
-// Pagination Schemas
-export const PaginationInfoSchema = z.object({
-  currentPage: z.number(),
-  totalPages: z.number(),
-  totalItems: z.number(),
-  itemsPerPage: z.number(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
-});
-
-// Search and Filter Schemas
-export const SearchFiltersSchema = z.object({
-  query: z.string().optional(),
-  category: z.string().optional(),
-  status: z.string().optional(),
-  dateRange: z.object({
-    start: z.date(),
-    end: z.date(),
-  }).optional(),
-  tags: z.array(z.string()).optional(),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).optional(),
-});
-
-// File Upload Schemas
-export const FileUploadConfigSchema = z.object({
-  maxSize: z.number(), // in bytes
-  allowedTypes: z.array(z.string()),
-  maxFiles: z.number().optional(),
-  autoUpload: z.boolean().optional(),
-  chunkSize: z.number().optional(),
-});
-
-export const FileUploadProgressSchema = z.object({
-  fileId: z.string(),
-  fileName: z.string(),
-  progress: z.number(), // 0-100
-  status: FileUploadStatusSchema,
-  error: z.string().optional(),
-});
-
-// Responsive Design Schemas
-export const ResponsiveValueSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
-  z.object({
-    base: valueSchema,
-    xs: valueSchema.optional(),
-    sm: valueSchema.optional(),
-    md: valueSchema.optional(),
-    lg: valueSchema.optional(),
-    xl: valueSchema.optional(),
-    '2xl': valueSchema.optional(),
-  });
-
-// Animation and Transition Schemas
-export const TransitionConfigSchema = z.object({
-  type: AnimationTypeSchema,
-  duration: z.number(),
+// Tooltip Schemas
+export const TooltipPropsSchema = ComponentPropsSchema.extend({
+  content: z.string(),
+  placement: z.enum(['top', 'bottom', 'left', 'right']).optional(),
+  trigger: z.enum(['hover', 'click', 'focus']).optional(),
   delay: z.number().optional(),
-  easing: z.string().optional(),
-  direction: AnimationDirectionSchema.optional(),
+  disabled: z.boolean().optional(),
 });
 
-// Accessibility Schemas
-export const AriaPropsSchema = z.object({
-  'aria-label': z.string().optional(),
-  'aria-describedby': z.string().optional(),
-  'aria-labelledby': z.string().optional(),
-  'aria-hidden': z.boolean().optional(),
-  'aria-expanded': z.boolean().optional(),
-  'aria-selected': z.boolean().optional(),
-  'aria-checked': z.boolean().optional(),
-  'aria-disabled': z.boolean().optional(),
-  'aria-required': z.boolean().optional(),
-  'aria-invalid': z.boolean().optional(),
-  role: z.string().optional(),
-  tabIndex: z.number().optional(),
+// Dropdown Schemas
+export const DropdownItemSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  icon: z.any().optional(), // React.ReactNode
+  disabled: z.boolean().optional(),
+  onClick: z.function().optional(),
+  divider: z.boolean().optional(),
 });
 
-// Internationalization Schemas
-export const LocaleConfigSchema = z.object({
-  locale: z.string(),
-  currency: z.string(),
-  dateFormat: z.string(),
-  timeFormat: z.string(),
-  numberFormat: z.object({
-    decimal: z.string(),
-    thousands: z.string(),
-    precision: z.number(),
-  }),
+export const DropdownPropsSchema = ComponentPropsSchema.extend({
+  items: z.array(DropdownItemSchema),
+  trigger: z.any(), // React.ReactNode
+  placement: z.enum(['top', 'bottom', 'left', 'right']).optional(),
+  disabled: z.boolean().optional(),
 });
 
-// Performance and Optimization Schemas
-export const LazyLoadConfigSchema = z.object({
-  threshold: z.number(),
-  rootMargin: z.string(),
-  triggerOnce: z.boolean(),
+// Tabs Schemas
+export const TabItemSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  content: z.any(), // React.ReactNode
+  disabled: z.boolean().optional(),
+  icon: z.any().optional(), // React.ReactNode
 });
 
-export const VirtualScrollConfigSchema = z.object({
-  itemHeight: z.number(),
-  overscan: z.number(),
-  containerHeight: z.number(),
+export const TabsPropsSchema = ComponentPropsSchema.extend({
+  items: z.array(TabItemSchema),
+  defaultActiveKey: z.string().optional(),
+  activeKey: z.string().optional(),
+  onChange: z.function().optional(),
+  variant: z.enum(['default', 'pills', 'underline']).optional(),
 });
 
-// Error Boundary Schemas
-export const ErrorBoundaryStateSchema = z.object({
-  hasError: z.boolean(),
-  error: z.instanceof(Error).optional(),
-  errorInfo: z.any().optional(), // React.ErrorInfo
+// Accordion Schemas
+export const AccordionItemSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  content: z.any(), // React.ReactNode
+  disabled: z.boolean().optional(),
+  icon: z.any().optional(), // React.ReactNode
 });
 
-export const ErrorFallbackPropsSchema = z.object({
-  error: z.instanceof(Error),
-  resetErrorBoundary: z.function(),
+export const AccordionPropsSchema = ComponentPropsSchema.extend({
+  items: z.array(AccordionItemSchema),
+  defaultOpenKeys: z.array(z.string()).optional(),
+  openKeys: z.array(z.string()).optional(),
+  onChange: z.function().optional(),
+  multiple: z.boolean().optional(),
 });
 
-// Context Schemas
-export const ThemeContextTypeSchema = z.object({
-  theme: ThemeConfigSchema,
-  setTheme: z.function(),
-  toggleTheme: z.function(),
+// Card Schemas
+export const CardPropsSchema = ComponentPropsSchema.extend({
+  title: z.string().optional(),
+  subtitle: z.string().optional(),
+  header: z.any().optional(), // React.ReactNode
+  footer: z.any().optional(), // React.ReactNode
+  image: z.string().optional(),
+  imageAlt: z.string().optional(),
+  variant: z.enum(['default', 'outlined', 'elevated']).optional(),
+  padding: z.union([z.string(), z.number()]).optional(),
 });
 
-export const AuthContextTypeSchema = z.object({
-  user: z.any().nullable(),
-  isAuthenticated: z.boolean(),
-  isLoading: z.boolean(),
-  login: z.function(),
-  logout: z.function(),
-  refreshToken: z.function(),
+// Badge Schemas
+export const BadgeVariantSchema = z.enum(['default', 'primary', 'secondary', 'success', 'warning', 'error', 'info']);
+export const BadgeSizeSchema = z.enum(['sm', 'md', 'lg']);
+export const BadgePropsSchema = ComponentPropsSchema.extend({
+  variant: BadgeVariantSchema.optional(),
+  size: BadgeSizeSchema.optional(),
+  content: z.union([z.string(), z.number()]),
+  max: z.number().optional(),
+  dot: z.boolean().optional(),
 });
 
-// Hook Return Schemas
-export const UseLocalStorageReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
-  z.tuple([valueSchema, z.function(), z.function()]);
-
-export const UseDebounceReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
-  z.tuple([valueSchema, z.function()]);
-
-export const UseIntersectionObserverReturnSchema = z.object({
-  ref: z.any(), // React.RefObject<Element>
-  isIntersecting: z.boolean(),
-  entry: z.any().optional(), // IntersectionObserverEntry
+// Avatar Schemas
+export const AvatarSizeSchema = z.enum(['xs', 'sm', 'md', 'lg', 'xl']);
+export const AvatarPropsSchema = ComponentPropsSchema.extend({
+  src: z.string().optional(),
+  alt: z.string().optional(),
+  size: AvatarSizeSchema.optional(),
+  fallback: z.string().optional(),
+  shape: z.enum(['circle', 'square']).optional(),
 });
 
-export const UseMediaQueryReturnSchema = z.object({
-  matches: z.boolean(),
-  media: z.string(),
+// Progress Schemas
+export const ProgressPropsSchema = ComponentPropsSchema.extend({
+  value: z.number(),
+  max: z.number().optional(),
+  min: z.number().optional(),
+  size: z.enum(['sm', 'md', 'lg']).optional(),
+  variant: z.enum(['default', 'success', 'warning', 'error']).optional(),
+  showValue: z.boolean().optional(),
+  animated: z.boolean().optional(),
 });
 
-// Event Handler Schemas
-export const KeyboardEventHandlerSchema = z.function();
-export const MouseEventHandlerSchema = z.function();
-export const ChangeEventHandlerSchema = z.function();
-export const FocusEventHandlerSchema = z.function();
-export const FormEventHandlerSchema = z.function();
+// Switch Schemas
+export const SwitchPropsSchema = ComponentPropsSchema.extend({
+  checked: z.boolean(),
+  onChange: z.function(),
+  disabled: z.boolean().optional(),
+  size: z.enum(['sm', 'md', 'lg']).optional(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+});
 
-// Ref Schemas
-export const RefCallbackSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>
-  z.function().args(z.union([instanceSchema, z.null()]));
+// Checkbox Schemas
+export const CheckboxPropsSchema = ComponentPropsSchema.extend({
+  checked: z.boolean(),
+  onChange: z.function(),
+  disabled: z.boolean().optional(),
+  indeterminate: z.boolean().optional(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+});
 
-export const RefObjectSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>
-  z.object({
-    current: z.union([instanceSchema, z.null()]),
-  });
+// Radio Schemas
+export const RadioPropsSchema = ComponentPropsSchema.extend({
+  checked: z.boolean(),
+  onChange: z.function(),
+  disabled: z.boolean().optional(),
+  label: z.string().optional(),
+  description: z.string().optional(),
+  value: z.any(),
+});
+
+// Select Schemas
+export const SelectOptionSchema = z.object({
+  value: z.any(),
+  label: z.string(),
+  disabled: z.boolean().optional(),
+  icon: z.any().optional(), // React.ReactNode
+});
+
+export const SelectPropsSchema = ComponentPropsSchema.extend({
+  options: z.array(SelectOptionSchema),
+  value: z.any().optional(),
+  onChange: z.function().optional(),
+  placeholder: z.string().optional(),
+  disabled: z.boolean().optional(),
+  multiple: z.boolean().optional(),
+  searchable: z.boolean().optional(),
+  clearable: z.boolean().optional(),
+});
+
+// Textarea Schemas
+export const TextareaPropsSchema = ComponentPropsSchema.extend({
+  value: z.string().optional(),
+  defaultValue: z.string().optional(),
+  placeholder: z.string().optional(),
+  rows: z.number().optional(),
+  cols: z.number().optional(),
+  maxLength: z.number().optional(),
+  minLength: z.number().optional(),
+  required: z.boolean().optional(),
+  disabled: z.boolean().optional(),
+  readOnly: z.boolean().optional(),
+  autoResize: z.boolean().optional(),
+  onChange: z.function().optional(),
+  onBlur: z.function().optional(),
+  onFocus: z.function().optional(),
+});
+
+// File Input Schemas
+export const FileInputPropsSchema = ComponentPropsSchema.extend({
+  accept: z.string().optional(),
+  multiple: z.boolean().optional(),
+  maxSize: z.number().optional(),
+  onFileSelect: z.function().optional(),
+  dragAndDrop: z.boolean().optional(),
+  preview: z.boolean().optional(),
+});
+
+// Date Picker Schemas
+export const DatePickerPropsSchema = ComponentPropsSchema.extend({
+  value: z.date().optional(),
+  onChange: z.function().optional(),
+  placeholder: z.string().optional(),
+  format: z.string().optional(),
+  disabled: z.boolean().optional(),
+  minDate: z.date().optional(),
+  maxDate: z.date().optional(),
+  range: z.boolean().optional(),
+});
+
+// Time Picker Schemas
+export const TimePickerPropsSchema = ComponentPropsSchema.extend({
+  value: z.string().optional(),
+  onChange: z.function().optional(),
+  placeholder: z.string().optional(),
+  format: z.enum(['12h', '24h']).optional(),
+  disabled: z.boolean().optional(),
+  minTime: z.string().optional(),
+  maxTime: z.string().optional(),
+});
+
+// Color Picker Schemas
+export const ColorPickerPropsSchema = ComponentPropsSchema.extend({
+  value: z.string().optional(),
+  onChange: z.function().optional(),
+  presetColors: z.array(z.string()).optional(),
+  format: z.enum(['hex', 'rgb', 'hsl']).optional(),
+  disabled: z.boolean().optional(),
+});
+
+// Slider Schemas
+export const SliderPropsSchema = ComponentPropsSchema.extend({
+  value: z.union([z.number(), z.array(z.number())]),
+  onChange: z.function().optional(),
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().optional(),
+  disabled: z.boolean().optional(),
+  range: z.boolean().optional(),
+  marks: z.array(z.object({
+    value: z.number(),
+    label: z.string(),
+  })).optional(),
+});
+
+// Rating Schemas
+export const RatingPropsSchema = ComponentPropsSchema.extend({
+  value: z.number(),
+  onChange: z.function().optional(),
+  max: z.number().optional(),
+  disabled: z.boolean().optional(),
+  readOnly: z.boolean().optional(),
+  size: z.enum(['sm', 'md', 'lg']).optional(),
+  character: z.any().optional(), // React.ReactNode
+});
+
+// Tree Schemas
+export const TreeNodeSchema: z.ZodType<any> = z.object({
+  key: z.string(),
+  title: z.string(),
+  children: z.array(z.lazy(() => TreeNodeSchema)).optional(),
+  disabled: z.boolean().optional(),
+  icon: z.any().optional(), // React.ReactNode
+});
+
+export const TreePropsSchema = ComponentPropsSchema.extend({
+  data: z.array(TreeNodeSchema),
+  defaultExpandedKeys: z.array(z.string()).optional(),
+  expandedKeys: z.array(z.string()).optional(),
+  onExpand: z.function().optional(),
+  onSelect: z.function().optional(),
+  checkable: z.boolean().optional(),
+  selectable: z.boolean().optional(),
+});
+
+// Transfer Schemas
+export const TransferItemSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  disabled: z.boolean().optional(),
+});
+
+export const TransferPropsSchema = ComponentPropsSchema.extend({
+  dataSource: z.array(TransferItemSchema),
+  targetKeys: z.array(z.string()),
+  onChange: z.function().optional(),
+  titles: z.array(z.string()).optional(),
+  disabled: z.boolean().optional(),
+  showSearch: z.boolean().optional(),
+  showSelectAll: z.boolean().optional(),
+});
+
+// Upload Schemas
+export const UploadFileSchema = z.object({
+  uid: z.string(),
+  name: z.string(),
+  status: z.enum(['uploading', 'done', 'error', 'removed']).optional(),
+  url: z.string().optional(),
+  thumbUrl: z.string().optional(),
+  size: z.number().optional(),
+  type: z.string().optional(),
+});
+
+export const UploadPropsSchema = ComponentPropsSchema.extend({
+  fileList: z.array(UploadFileSchema).optional(),
+  onChange: z.function().optional(),
+  beforeUpload: z.function().optional(),
+  customRequest: z.function().optional(),
+  accept: z.string().optional(),
+  multiple: z.boolean().optional(),
+  maxCount: z.number().optional(),
+  disabled: z.boolean().optional(),
+  dragAndDrop: z.boolean().optional(),
+});
+
+// Calendar Schemas
+export const CalendarEventSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  start: z.date(),
+  end: z.date(),
+  allDay: z.boolean().optional(),
+  color: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const CalendarPropsSchema = ComponentPropsSchema.extend({
+  events: z.array(CalendarEventSchema).optional(),
+  onEventClick: z.function().optional(),
+  onDateClick: z.function().optional(),
+  view: z.enum(['month', 'week', 'day']).optional(),
+  defaultDate: z.date().optional(),
+  minDate: z.date().optional(),
+  maxDate: z.date().optional(),
+  editable: z.boolean().optional(),
+  selectable: z.boolean().optional(),
+});
+
+// Timeline Schemas
+export const TimelineItemSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  time: z.string().optional(),
+  icon: z.any().optional(), // React.ReactNode
+  color: z.string().optional(),
+  status: z.enum(['pending', 'processing', 'success', 'error']).optional(),
+});
+
+export const TimelinePropsSchema = ComponentPropsSchema.extend({
+  items: z.array(TimelineItemSchema),
+  mode: z.enum(['left', 'right', 'alternate']).optional(),
+  pending: z.any().optional(), // React.ReactNode
+});
+
+// Steps Schemas
+export const StepItemSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  icon: z.any().optional(), // React.ReactNode
+  status: z.enum(['wait', 'process', 'finish', 'error']).optional(),
+  disabled: z.boolean().optional(),
+});
+
+export const StepsPropsSchema = ComponentPropsSchema.extend({
+  items: z.array(StepItemSchema),
+  current: z.number().optional(),
+  onChange: z.function().optional(),
+  direction: z.enum(['horizontal', 'vertical']).optional(),
+  size: z.enum(['default', 'small']).optional(),
+  status: z.enum(['wait', 'process', 'finish', 'error']).optional(),
+});
+
+// Divider Schemas
+export const DividerPropsSchema = ComponentPropsSchema.extend({
+  type: z.enum(['horizontal', 'vertical']).optional(),
+  orientation: z.enum(['left', 'right', 'center']).optional(),
+  dashed: z.boolean().optional(),
+  plain: z.boolean().optional(),
+});
+
+// Space Schemas
+export const SpacePropsSchema = ComponentPropsSchema.extend({
+  direction: z.enum(['horizontal', 'vertical']).optional(),
+  size: z.union([z.number(), z.enum(['small', 'middle', 'large'])]).optional(),
+  align: z.enum(['start', 'end', 'center', 'baseline']).optional(),
+  wrap: z.boolean().optional(),
+});
+
+// Grid Schemas
+export const GridColPropsSchema = ComponentPropsSchema.extend({
+  span: z.number().optional(),
+  offset: z.number().optional(),
+  order: z.number().optional(),
+  push: z.number().optional(),
+  pull: z.number().optional(),
+  xs: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+  sm: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+  md: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+  lg: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+  xl: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+  xxl: z.union([z.number(), z.object({ span: z.number(), offset: z.number().optional() })]).optional(),
+});
+
+export const GridRowPropsSchema = ComponentPropsSchema.extend({
+  gutter: z.union([z.number(), z.array(z.number())]).optional(),
+  justify: z.enum(['start', 'end', 'center', 'space-around', 'space-between']).optional(),
+  align: z.enum(['top', 'middle', 'bottom']).optional(),
+  wrap: z.boolean().optional(),
+});
+
+// Layout Schemas
+export const LayoutPropsSchema = ComponentPropsSchema.extend({
+  hasSider: z.boolean().optional(),
+});
+
+export const LayoutHeaderPropsSchema = ComponentPropsSchema.extend({
+  height: z.union([z.string(), z.number()]).optional(),
+  fixed: z.boolean().optional(),
+});
+
+export const LayoutSiderPropsSchema = ComponentPropsSchema.extend({
+  width: z.union([z.string(), z.number()]).optional(),
+  collapsed: z.boolean().optional(),
+  onCollapse: z.function().optional(),
+  trigger: z.any().optional(), // React.ReactNode
+  breakpoint: z.enum(['xs', 'sm', 'md', 'lg', 'xl', 'xxl']).optional(),
+});
+
+export const LayoutContentPropsSchema = ComponentPropsSchema.extend({
+  padding: z.union([z.string(), z.number()]).optional(),
+});
+
+export const LayoutFooterPropsSchema = ComponentPropsSchema.extend({
+  height: z.union([z.string(), z.number()]).optional(),
+});
 
 // Children Schemas
 export const ReactNodeSchema = z.any(); // React.ReactNode
@@ -686,4 +718,53 @@ export const AnimationDelaySchema = z.union([CSSSizeSchema, ResponsiveValueSchem
 export const AnimationIterationCountSchema = z.union([z.number(), z.enum(['infinite']), ResponsiveValueSchema(z.union([z.number(), z.enum(['infinite'])]))]);
 export const AnimationDirectionSchema = z.enum(['normal', 'reverse', 'alternate', 'alternate-reverse']);
 export const AnimationFillModeSchema = z.enum(['none', 'forwards', 'backwards', 'both']);
-export const AnimationPlayStateSchema = z.enum(['running', 'paused']); 
+export const AnimationPlayStateSchema = z.enum(['running', 'paused']);
+
+// Hook Return Type Schemas
+export const UseStateReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  z.tuple([valueSchema, z.function().args(valueSchema).returns(z.void())]);
+
+export const UseEffectReturnSchema = z.undefined();
+
+export const UseCallbackReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  z.function().returns(valueSchema);
+
+export const UseMemoReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  valueSchema;
+
+export const UseRefReturnSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>
+  z.object({
+    current: z.union([instanceSchema, z.null()]),
+  });
+
+export const UseLocalStorageReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  z.tuple([valueSchema, z.function(), z.function()]);
+
+export const UseDebounceReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
+  z.tuple([valueSchema, z.function()]);
+
+export const UseIntersectionObserverReturnSchema = z.object({
+  ref: z.function(),
+  inView: z.boolean(),
+  entry: z.any().optional(), // IntersectionObserverEntry
+});
+
+export const UseClickOutsideReturnSchema = z.object({
+  ref: z.function(),
+});
+
+export const UseHoverReturnSchema = z.tuple([z.boolean(), z.object({
+  onMouseEnter: z.function(),
+  onMouseLeave: z.function(),
+})]);
+
+export const UseKeyPressReturnSchema = z.boolean();
+
+// Ref Schemas
+export const RefCallbackSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>
+  z.function().args(z.union([instanceSchema, z.null()]));
+
+export const RefObjectSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>
+  z.object({
+    current: z.union([instanceSchema, z.null()]),
+  }); 

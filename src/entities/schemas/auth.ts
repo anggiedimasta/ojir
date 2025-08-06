@@ -182,7 +182,7 @@ export const SessionDataSchema = z.object({
 });
 
 // OAuth provider schema
-export const OAuthProviderSchema = z.object({
+export const OAuthProviderConfigSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   displayName: z.string().min(1),
@@ -211,7 +211,7 @@ export const OAuthProfileSchema = z.object({
 });
 
 // Two-factor method schema
-export const TwoFactorMethodSchema = z.object({
+export const TwoFactorMethodConfigSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   type: TwoFactorMethodSchema,

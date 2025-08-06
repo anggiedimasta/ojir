@@ -26,7 +26,7 @@ export type Amount = string;
 export type Currency = 'IDR' | 'USD' | 'EUR' | 'GBP' | 'JPY' | 'SGD' | 'MYR' | 'THB' | 'PHP' | 'VND';
 
 // Date range type
-export type DateRange = {
+export type WalletDateRange = {
   startDate?: Date;
   endDate?: Date;
 };
