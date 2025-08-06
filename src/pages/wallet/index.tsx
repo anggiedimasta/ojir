@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { useSidebarStoreHydrated, useWalletFiltersStore, useLoadingStore } from "~/store";
+import { useSidebarHydrated } from "~/hooks/state";
+import { useWalletFiltersStore, useLoadingStore } from "~/store";
 import { api } from "~/trpc/react";
 import { WalletHeader, WalletSummary, WalletFilters, WalletList } from "~/components/features/wallet";
 import { TransactionList } from "~/components/tables";
 import { TransactionEditForm } from "~/components/forms";
 import { WalletFormModal, BulkUpdateModal } from "~/components/modals";
-import { useWalletManagement } from "~/hooks/use-wallet-management";
-import { useBulkUpdate } from "~/hooks/use-bulk-update";
-import { useTransactionManagement } from "~/hooks/use-transaction-management";
-import { formatCurrency, formatDate } from "~/utils/formatters";
+import { useWalletManagement, useBulkUpdate, useTransactionManagement } from "~/hooks/features/wallet";
+import { formatCurrency, formatDate } from "~/utils/formatting";
 
 import type { DateRange } from "~/entities/api/wallet";
 
 export default function WalletPage() {
-  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
+  const { isCollapsed, hasHydrated } = useSidebarHydrated();
   const { isLoading, setLoading } = useLoadingStore();
 
   // Wallet selection state

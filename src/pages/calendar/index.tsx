@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "~/trpc/react";
-import { useSidebarStoreHydrated } from "~/store/sidebar-store";
+import { useSidebarHydrated } from "~/hooks/state";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
@@ -11,7 +11,7 @@ import { useToast } from "~/components/ui/use-toast";
 import { MonthView, WeekView, DayView, type CalendarView } from "~/components/features/calendar";
 
 export default function CalendarPage() {
-  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
+  const { isCollapsed, hasHydrated } = useSidebarHydrated();
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();

@@ -195,26 +195,54 @@ This document tracks the migration of the codebase from its current structure to
 **Priority: Medium | Estimated Time: 2-3 days**
 
 #### 3.1 Hooks Organization
-- [ ] Create `src/hooks/` structure:
-  - [ ] `src/hooks/api/` - API-related hooks
-  - [ ] `src/hooks/ui/` - UI-related hooks
-  - [ ] `src/hooks/state/` - State management hooks
-  - [ ] `src/hooks/utils/` - Utility hooks
-  - [ ] `src/hooks/features/` - Feature-specific hooks
-- [ ] Organize by domain:
-  - [ ] `src/hooks/features/wallet/`
-  - [ ] `src/hooks/features/calendar/`
-  - [ ] `src/hooks/features/auth/`
+**Status: COMPLETED** | **Started: 2024-12-19** | **Completed: 2024-12-19**
+
+- [x] Create `src/hooks/` structure:
+  - [x] `src/hooks/api/` - API-related hooks
+  - [x] `src/hooks/ui/` - UI-related hooks
+  - [x] `src/hooks/state/` - State management hooks
+  - [x] `src/hooks/utils/` - Utility hooks
+  - [x] `src/hooks/features/` - Feature-specific hooks
+- [x] Organize by domain:
+  - [x] `src/hooks/features/wallet/`
+  - [x] `src/hooks/features/calendar/`
+  - [x] `src/hooks/features/auth/`
+
+**Current Task**: Phase 3.1 completed, ready for Phase 3.2
+
+**Progress**:
+- ✅ Created organized hooks directory structure with clear separation of concerns
+- ✅ Migrated API hooks from src/api/hooks/ to src/hooks/api/
+- ✅ Migrated feature-specific hooks to src/hooks/features/wallet/
+- ✅ Created state management wrapper hooks in src/hooks/state/
+- ✅ Created common UI hooks (modal, toggle, pagination) in src/hooks/ui/
+- ✅ Updated hook import statements across the codebase
+- ✅ Created comprehensive index files for easy imports
+- 🔄 Next: Phase 3.2 - Utils Organization
 
 #### 3.2 Utils Organization
-- [ ] Create `src/utils/` structure:
-  - [ ] `src/utils/formatting/` - Formatting utilities
-  - [ ] `src/utils/validation/` - Validation utilities
-  - [ ] `src/utils/date/` - Date utilities
-  - [ ] `src/utils/currency/` - Currency utilities
-  - [ ] `src/utils/storage/` - Storage utilities
-  - [ ] `src/utils/api/` - API utilities
-  - [ ] `src/utils/constants/` - Constants
+**Status: COMPLETED** | **Started: 2024-12-19** | **Completed: 2024-12-19**
+
+- [x] Create `src/utils/` structure:
+  - [x] `src/utils/formatting/` - Formatting utilities
+  - [x] `src/utils/validation/` - Validation utilities
+  - [x] `src/utils/date/` - Date utilities
+  - [x] `src/utils/currency/` - Currency utilities
+  - [x] `src/utils/storage/` - Storage utilities
+  - [x] `src/utils/api/` - API utilities
+  - [x] `src/utils/constants/` - Constants
+
+**Current Task**: Phase 3.2 completed, Phase 3 complete, ready for Phase 4
+
+**Progress**:
+- ✅ Created organized utils directory structure by functionality
+- ✅ Migrated formatters to src/utils/formatting/
+- ✅ Created validation utilities with common patterns
+- ✅ Created date utilities for common date operations
+- ✅ Set up structure for future currency, storage, and API utilities
+- ✅ Created comprehensive index files for easy imports
+- ✅ Updated import statements to use new utils structure
+- 🔄 Next: Phase 4 - Infrastructure & Configuration
 
 ### Phase 4: Infrastructure & Configuration
 **Priority: Medium | Estimated Time: 1-2 days**
@@ -465,6 +493,20 @@ Total estimated time: 4 weeks
 - ✅ Cleaned up old atomic design structure (atoms, molecules, organisms, templates)
 - ✅ Created comprehensive index files for easy imports and better modularity
 - 🔄 Next: Phase 3 - Business Logic Layer
+
+### 2024-12-19 - Phase 3.1 & 3.2 Business Logic Layer Completed
+- ✅ Created organized hooks directory structure (api, ui, state, features, utils)
+- ✅ Migrated API hooks from src/api/hooks/ to src/hooks/api/
+- ✅ Migrated feature-specific hooks to src/hooks/features/wallet/
+- ✅ Created state management wrapper hooks for better naming and consistency
+- ✅ Created common UI hooks (useModal, useToggle, usePagination) for reusable patterns
+- ✅ Created organized utils directory structure by functionality
+- ✅ Migrated formatters to src/utils/formatting/ with proper organization
+- ✅ Created validation utilities with common validation patterns
+- ✅ Created date utilities for common date operations
+- ✅ Updated all hook and utility import statements across the codebase
+- ✅ Created comprehensive index files for easy imports and better modularity
+- 🔄 Next: Phase 4 - Infrastructure & Configuration
 
 ## Summary of Completed Work
 
