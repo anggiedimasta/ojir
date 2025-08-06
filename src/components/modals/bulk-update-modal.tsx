@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal } from "~/components/ui/modal";
+import { Modal } from "./modal";
 import { Button } from "~/components/ui/button";
 import type { TransactionResponse, WalletWithBank } from "~/entities/api/wallet";
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { Modal } from "~/components/ui/modal";
+import { Modal } from "~/components/modals";
 import { Button } from "~/components/ui/button";
-import { WalletForm } from "~/components/wallet/wallet-form";
+import { WalletForm } from "~/components/forms";
 import type { WalletWithBank, Bank } from "~/entities/api/wallet";
 
 interface WalletFormModalProps {

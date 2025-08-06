@@ -1,10 +1,10 @@
 import { Card } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Download, Wallet, RefreshCw } from "lucide-react";
-import { TransactionItem } from "~/components/ui/transaction-item";
+import { TransactionItem } from "./transaction-item";
+import { TransactionSkeleton as TransactionListSkeleton } from "./transaction-skeleton";
 import { EmptyState } from "~/components/ui/empty-state";
-import { PaginationControls } from "~/components/ui/pagination-controls";
-import { TransactionListSkeleton } from "~/components/ui/transaction-skeleton";
+import { PaginationControls } from "./pagination-controls";
 import type { TransactionListProps } from "~/entities/api/wallet";
 
 

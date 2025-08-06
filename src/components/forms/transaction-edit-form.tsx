@@ -9,7 +9,7 @@ import { Input } from "~/components/atoms/input";
 import { Label } from "~/components/atoms/label";
 import { SelectInput } from "~/components/molecules/select-input";
 import { DateInput } from "~/components/molecules/date-input";
-import { Modal, ModalHeader, ModalTitle, ModalDescription, ModalFooter, ModalCloseButton } from "~/components/ui/modal";
+import { Modal, ModalHeader, ModalTitle, ModalDescription, ModalFooter, ModalCloseButton } from "~/components/modals";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 import type { TransactionResponse } from "~/entities/api/wallet";

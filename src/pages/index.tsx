@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Navbar } from "~/components/ui/navbar";
-import { Footer } from "~/components/ui/footer";
+import { Navbar, Footer } from "~/components/layout";
 import { BarChart3, Target, Shield, ArrowRight, Calendar, Users, ChevronDown } from "lucide-react";
-import { AnimatedSections } from "~/components/sections/animated-sections";
-import { CountingStats } from "~/components/ui/counting-stats";
+import { AnimatedSections } from "~/components/layout";
+import { CountingStats } from "~/components/charts";
 
 import { auth } from "~/server/auth";
 import { HydrateClient } from "~/trpc/server";

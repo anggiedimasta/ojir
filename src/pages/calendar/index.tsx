@@ -8,10 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "~/components/ui/card";
 import { useToast } from "~/components/ui/use-toast";
-import { MonthView } from "./_components/month-view";
-import { WeekView } from "./_components/week-view";
-import { DayView } from "./_components/day-view";
-import { type CalendarView } from "./_components/types";
+import { MonthView, WeekView, DayView, type CalendarView } from "~/components/features/calendar";
 
 export default function CalendarPage() {
   const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
