@@ -15,3 +15,6 @@ export { SortControls } from './sort-controls';
 export { Toast } from './toast';
 export { Toaster } from './toaster';
 export { useToast } from './use-toast';
+export { LoadingSpinner } from './loading-spinner';
+export { LoadingButton } from './loading-button';
+export { LoadingOverlay } from './loading-overlay';
