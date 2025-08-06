@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import type { ReactNode } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { X } from "lucide-react";
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils";
 
 interface ModalProps {
   isOpen: boolean;

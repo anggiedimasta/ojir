@@ -1,3 +1,6 @@
+// Class name utility
+export { cn } from './cn';
+
 // Formatting utilities
 export * from './formatting';
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLoadingStore } from "~/store";
-import { cn } from "~/lib/utils";
+import { cn } from "~/utils";
 
 export function GlobalLoadingBar() {
   const { isLoading, loadingMessage } = useLoadingStore();
