@@ -55,7 +55,7 @@ export function WalletFormModal({
       }
     >
       <WalletForm
-        wallet={editingWallet}
+        wallet={editingWallet || undefined}
         banks={banks}
         onSubmit={onSubmit}
         onCancel={onCancel}

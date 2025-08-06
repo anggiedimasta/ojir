@@ -37,7 +37,6 @@ const transactionEditSchema = z.object({
   recipientBank: z.string().optional(),
   recipientBankAccount: z.string().optional(),
   transferPurpose: z.string().optional(),
-  description: z.string().optional(),
 });
 
 type TransactionEditFormData = z.infer<typeof transactionEditSchema>;
@@ -52,6 +51,7 @@ interface TransactionEditFormProps {
 export function TransactionEditForm({ transaction, isOpen, onClose, onSuccess }: TransactionEditFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dateValue, setDateValue] = useState("");
 
   // Get user wallets for the wallet selector
   const { data: wallets = [] } = api.wallet.getWallets.useQuery();
@@ -97,7 +97,6 @@ export function TransactionEditForm({ transaction, isOpen, onClose, onSuccess }:
       recipientBank: "",
       recipientBankAccount: "",
       transferPurpose: "",
-      description: "",
     },
   });
 
@@ -117,8 +116,11 @@ export function TransactionEditForm({ transaction, isOpen, onClose, onSuccess }:
         recipientBank: transaction.recipientBank || "",
         recipientBankAccount: transaction.recipientBankAccount || "",
         transferPurpose: transaction.transferPurpose || "",
-        description: transaction.description || "",
       });
+      if (transaction?.transactionDate) {
+        const dateString = new Date(transaction.transactionDate).toISOString().split('T')[0] || "";
+        setDateValue(dateString);
+      }
     }
   }, [transaction, reset]);
 
@@ -261,8 +263,11 @@ export function TransactionEditForm({ transaction, isOpen, onClose, onSuccess }:
                  <Label htmlFor="transactionDate" className="text-gray-700 font-medium text-sm">Date *</Label>
                  <div className="mt-1.5">
                    <DateInput
-                     value={watch("transactionDate")}
-                     onChange={(date) => setValue("transactionDate", date)}
+                     value={dateValue}
+                     onChange={(dateString) => {
+                       setDateValue(dateString);
+                       setValue("transactionDate", new Date(dateString));
+                     }}
                      placeholder="Select date"
                    />
                  </div>
@@ -402,18 +407,7 @@ export function TransactionEditForm({ transaction, isOpen, onClose, onSuccess }:
                </div>
              </div>
 
-             {/* Description */}
-             <div>
-               <Label htmlFor="description" className="text-gray-700 font-medium text-sm">Description</Label>
-               <div className="mt-1.5">
-                 <Input
-                   id="description"
-                   {...register("description")}
-                   placeholder="Add any additional notes about this transaction..."
-                   className="focus:ring-blue-500"
-                 />
-               </div>
-             </div>
+
            </div>
         </div>
 

@@ -257,7 +257,7 @@ function parseBankMandiriTransferEmail(htmlContent: string, actualSender?: strin
     let recipientBankAccount = '';
     if (recipientBankFull) {
       const bankAccountMatch = recipientBankFull.match(/Bank\s+([^-]+)\s*-\s*(\d+)/i);
-      if (bankAccountMatch) {
+      if (bankAccountMatch && bankAccountMatch[1] && bankAccountMatch[2]) {
         const bankName = bankAccountMatch[1].trim()
           .replace(/&nbsp;/g, ' ')
           .replace(/\s+/g, ' ')
