@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { env } from "../src/env.js";
+import { env } from "../src/config/env.ts";
 import fs from "fs";
 import path from "path";
 
