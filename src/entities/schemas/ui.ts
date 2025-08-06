@@ -140,7 +140,7 @@ export const LoadingOverlayPropsSchema = ComponentPropsSchema.extend({
 });
 
 // Navigation and Menu Schemas
-export const MenuItemSchema = z.object({
+export const MenuItemSchema: z.ZodType<any> = z.object({
   id: z.string().optional(),
   title: z.string(),
   description: z.string().optional(),
@@ -444,7 +444,7 @@ export const RatingPropsSchema = ComponentPropsSchema.extend({
 });
 
 // Tree Schemas
-export const TreeNodeSchema = z.object({
+export const TreeNodeSchema: z.ZodType<any> = z.object({
   key: z.string(),
   title: z.string(),
   children: z.array(z.lazy(() => TreeNodeSchema)).optional(),
@@ -759,12 +759,6 @@ export const UseHoverReturnSchema = z.tuple([z.boolean(), z.object({
 })]);
 
 export const UseKeyPressReturnSchema = z.boolean();
-
-export const UseLocalStorageReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
-  z.tuple([valueSchema, z.function(), z.function()]);
-
-export const UseDebounceReturnSchema = <T extends z.ZodTypeAny>(valueSchema: T) =>
-  z.tuple([valueSchema, z.function()]);
 
 // Ref Schemas
 export const RefCallbackSchema = <T extends z.ZodTypeAny>(instanceSchema: T) =>

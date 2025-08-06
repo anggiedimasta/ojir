@@ -1,12 +1,8 @@
-// Calendar types
-
-// Event status types
+// Calendar Types
 export type EventStatus = 'tentative' | 'confirmed' | 'cancelled';
 
-// Event visibility types
 export type EventVisibility = 'public' | 'private' | 'confidential' | 'default';
 
-// Event type types
 export type EventType =
   | 'meeting'
   | 'appointment'
@@ -19,34 +15,24 @@ export type EventType =
   | 'workshop'
   | 'other';
 
-// Attendee role types
 export type AttendeeRole = 'organizer' | 'required' | 'optional' | 'resource';
 
-// Attendee status types
 export type AttendeeStatus = 'pending' | 'accepted' | 'declined' | 'tentative' | 'no-response';
 
-// Recurrence frequency types
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-// Reminder method types
 export type ReminderMethod = 'email' | 'popup' | 'sms' | 'push';
 
-// Calendar role types
 export type CalendarRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
-// Calendar view types
 export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'list';
 
-// Calendar share status types
 export type CalendarShareStatus = 'pending' | 'accepted' | 'declined';
 
-// Working days types
 export type WorkingDay = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 1 = Monday, etc.
 
-// Event priority types
 export type EventPriority = 'low' | 'medium' | 'high' | 'urgent';
 
-// Event category types
 export type EventCategory =
   | 'work'
   | 'personal'

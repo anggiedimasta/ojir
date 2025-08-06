@@ -1,4 +1,5 @@
-import { Button, ButtonProps } from './button';
+import { Button } from './button';
+import type { ButtonProps } from './button';
 import { LoadingSpinner } from './loading-spinner';
 import { cn } from '~/utils';
 
