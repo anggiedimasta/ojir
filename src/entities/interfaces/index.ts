@@ -1,7 +1,113 @@
-// Core interface definitions
+// Core interfaces - export specific interfaces to avoid conflicts
 export * from './common';
+
+// Auth interfaces
 export * from './auth';
+
+// Wallet interfaces
 export * from './wallet';
+
+// Calendar interfaces
 export * from './calendar';
-export * from './api';
-export * from './ui';
+
+// API interfaces (avoiding conflicts with common)
+export type {
+  ApiRequest,
+  ApiResponse,
+  ApiError,
+  PaginationParams,
+  PaginationResponse,
+  FilterParams,
+  SortParams,
+  SearchParams
+} from './api';
+
+// UI interfaces (avoiding conflicts with common)
+export type {
+  ComponentProps,
+  ResponsiveValue,
+  AnimationConfig,
+  TransitionConfig,
+  AriaProps,
+  LocaleConfig,
+  LazyLoadConfig,
+  VirtualScrollConfig,
+  ErrorBoundaryState,
+  ErrorFallbackProps,
+  ThemeContextType,
+  AuthContextType,
+  UseLocalStorageReturn,
+  UseDebounceReturn,
+  UseIntersectionObserverReturn,
+  UseClickOutsideReturn,
+  UseHoverReturn,
+  UseKeyPressReturn,
+  UseMediaQueryReturn,
+  KeyboardEventHandler,
+  MouseEventHandler,
+  ChangeEventHandler,
+  FocusEventHandler,
+  FormEventHandler,
+  RefCallback,
+  RefObject,
+  ReactNode,
+  ReactElement,
+  ReactChild,
+  ReactChildren,
+  CSSProperties,
+  CSSClassName,
+  CSSVariable,
+  CSSColor,
+  CSSSize,
+  CSSSpacing,
+  LayoutDirection,
+  FlexDirection,
+  JustifyContent,
+  AlignItems,
+  Position,
+  Display,
+  GridTemplate,
+  GridArea,
+  GridGap,
+  ZIndex,
+  BorderRadius,
+  BorderWidth,
+  BorderStyle,
+  BorderColor,
+  BoxShadow,
+  TextShadow,
+  FontFamily,
+  FontSize,
+  FontWeight,
+  LineHeight,
+  TextAlign,
+  TextTransform,
+  TextDecoration,
+  Margin,
+  Padding,
+  Gap,
+  Width,
+  Height,
+  MinWidth,
+  MaxWidth,
+  MinHeight,
+  MaxHeight,
+  Overflow,
+  Cursor,
+  UserSelect,
+  PointerEvents,
+  Transform,
+  TransformOrigin,
+  TransitionProperty,
+  TransitionDuration,
+  TransitionTimingFunction,
+  TransitionDelay,
+  AnimationName,
+  AnimationDuration,
+  AnimationTimingFunction,
+  AnimationDelay,
+  AnimationIterationCount,
+  AnimationDirection,
+  AnimationFillMode,
+  AnimationPlayState
+} from './ui';

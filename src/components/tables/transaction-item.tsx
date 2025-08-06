@@ -150,7 +150,7 @@ export function TransactionItem({ transaction, formatCurrency, formatDate, onEdi
 
           {transaction.acquirer && (
             <span className="px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded-full font-medium flex items-center gap-1">
-              <BankIcon bankName={transaction.acquirer} className="w-3 h-3" />
+                              <BankIcon bankCode={transaction.acquirer} className="w-3 h-3" />
               {transaction.acquirer}
             </span>
           )}
@@ -158,7 +158,7 @@ export function TransactionItem({ transaction, formatCurrency, formatDate, onEdi
           {/* New fields: Recipient Bank and Transfer Purpose */}
           {transaction.recipientBank && (
             <span className="px-2 py-1 text-xs bg-indigo-100 text-indigo-700 rounded-full font-medium flex items-center gap-1">
-              <BankIcon bankName={transaction.recipientBank} className="w-3 h-3" />
+                              <BankIcon bankCode={transaction.recipientBank} className="w-3 h-3" />
               {transaction.recipientBank}
             </span>
           )}
@@ -178,7 +178,7 @@ export function TransactionItem({ transaction, formatCurrency, formatDate, onEdi
           {transaction.walletName && (
             <span className={`px-2 py-1 text-xs rounded-full font-medium flex items-center gap-1 ${transaction.walletColor ? getWalletBadgeClasses(transaction.walletColor) : 'bg-blue-100 text-blue-700'}`}>
               <div className={`w-3 h-3 rounded flex items-center justify-center overflow-hidden ${transaction.walletColor ? 'bg-current/20' : 'bg-blue-200'}`}>
-                <BankIcon bankName={transaction.walletBankCode || 'unknown'} className="w-full h-full" />
+                <BankIcon bankCode={transaction.walletBankCode || 'unknown'} className="w-full h-full" />
               </div>
               {transaction.walletName === 'Uncategorized' ?
                 'Uncategorized' :

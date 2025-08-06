@@ -258,12 +258,12 @@ function parseBankMandiriTransferEmail(htmlContent: string, actualSender?: strin
     if (recipientBankFull) {
       const bankAccountMatch = recipientBankFull.match(/Bank\s+([^-]+)\s*-\s*(\d+)/i);
       if (bankAccountMatch) {
-        const bankName = bankAccountMatch[1].trim()
+        const bankName = bankAccountMatch[1]?.trim() || ''
           .replace(/&nbsp;/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
         recipientBank = bankName === 'Central Asia' ? 'BCA' : `Bank ${bankName}`;
-        recipientBankAccount = bankAccountMatch[2].trim();
+        recipientBankAccount = bankAccountMatch[2]?.trim() || '';
       } else {
         // Fallback: try to extract just bank name
         const bankMatch = recipientBankFull.match(/Bank\s+([^-]+)/i);

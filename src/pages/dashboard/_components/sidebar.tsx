@@ -72,7 +72,7 @@ export function Sidebar() {
                   key={item.href}
                   color="ghost"
                   className="w-full justify-start gap-2"
-                  active={pathname === item.href}
+                  variant={pathname === item.href ? 'secondary' : 'ghost'}
                   asChild
                 >
                   <Link href={item.href}>

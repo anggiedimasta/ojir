@@ -1,15 +1,17 @@
-// API Hooks
+// Core hooks - export specific hooks to avoid conflicts
 export * from './api';
 
-// UI Hooks
-export * from './ui';
+// Features hooks (avoiding conflicts with api)
+export type {
+  useBulkUpdate,
+  useTransactionManagement,
+  useWalletManagement
+} from './features/wallet';
+
+export * from './features/calendar';
 
 // State Hooks
 export * from './state';
-
-// Feature Hooks
-export * from './features/wallet';
-export * from './features/calendar';
 
 // Utils Hooks (if any in the future)
 // export * from './utils';

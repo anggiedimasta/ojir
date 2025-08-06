@@ -70,7 +70,7 @@ export default function DayClient({ date }: { date: string }) {
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button color="gray" size="icon" rounded="full" onClick={() => navigateToDay(-1)} aria-label="Previous Day">
+              <Button variant="outline" size="icon" className="rounded-full" onClick={() => navigateToDay(-1)} aria-label="Previous Day">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <h2 className="text-xl font-semibold">
@@ -81,18 +81,18 @@ export default function DayClient({ date }: { date: string }) {
                   year: 'numeric',
                 })}
               </h2>
-              <Button color="gray" size="icon" rounded="full" onClick={() => navigateToDay(1)} aria-label="Next Day">
+              <Button variant="outline" size="icon" className="rounded-full" onClick={() => navigateToDay(1)} aria-label="Next Day">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button color="gray" onClick={() => router.push('/dashboard/calendar')}>
+              <Button variant="outline" onClick={() => router.push('/dashboard/calendar')}>
                 Month
               </Button>
-              <Button color="gray" onClick={() => router.push('/dashboard/calendar/week')}>
+              <Button variant="outline" onClick={() => router.push('/dashboard/calendar/week')}>
                 Week
               </Button>
-              <Button color="gray" active>
+              <Button variant="secondary">
                 Day
               </Button>
             </div>

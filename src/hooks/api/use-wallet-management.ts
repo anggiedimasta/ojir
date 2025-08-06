@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateWallet, useUpdateWallet, useDeleteWallet } from '../mutations/wallet';
 import { useWallets, useWallet } from '../queries/wallet';
-import type { CreateWalletInput, UpdateWalletInput } from '@/entities/types/wallet';
+import type { CreateWalletInput, UpdateWalletInput } from '~/entities/types/wallet';
 
 /**
  * Custom hook for wallet management operations

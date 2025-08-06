@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBulkUpdateTransactions } from '../mutations/wallet';
-import type { CreateTransactionInput } from '@/entities/types/wallet';
+import type { CreateTransactionInput } from '~/entities/types/wallet';
 
 /**
  * Custom hook for bulk update operations

@@ -453,17 +453,16 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
               <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
               <div className="space-y-2">
                 <Button
-                  className="w-full"
-                  color="gray"
+                  className="w-full justify-start"
+                  variant="outline"
                   size="sm"
-                  align="left"
                   onClick={handleShareEvent}
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Share Event
                 </Button>
                 {event.isGoogleEvent && (
-                  <Button className="w-full" color="gray" size="sm" align="left" onClick={handleViewInGoogleCalendar}>
+                  <Button className="w-full justify-start" variant="outline" size="sm" onClick={handleViewInGoogleCalendar}>
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View in Google Calendar
                   </Button>

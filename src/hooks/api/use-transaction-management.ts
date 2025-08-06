@@ -6,7 +6,7 @@ import {
   useBulkUpdateTransactions 
 } from '../mutations/wallet';
 import { useTransactions, useTransaction } from '../queries/wallet';
-import type { CreateTransactionInput, TransactionFilters } from '@/entities/types/wallet';
+import type { CreateTransactionInput, TransactionFilters } from '~/entities/types/wallet';
 
 /**
  * Custom hook for transaction management operations

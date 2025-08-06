@@ -103,41 +103,43 @@ export default function WalletPage() {
   const { data: transactions, refetch: refetchTransactions } = api.wallet.getTransactions.useQuery({
     limit: pageSize,
     offset: currentPage * pageSize,
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-    searchQuery: searchQuery.trim() || undefined,
-    recipientBank: recipientBank,
-    paymentMethod: paymentMethod,
-    sortBy: sortBy,
+    startDate: dateRange.startDate?.toISOString(),
+    endDate: dateRange.endDate?.toISOString(),
+    search: searchQuery.trim() || undefined,
+    bankFilter: recipientBank,
+    paymentMethodFilter: paymentMethod,
+    sortBy: sortBy === 'recipient' ? 'description' : sortBy,
     sortOrder: sortOrder,
-    walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+    walletId: selectedWalletIds.length > 0 ? selectedWalletIds[0] : undefined,
   }, {
     enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
   });
 
-  // Get total count for pagination
-  const { data: totalCount } = api.wallet.getTransactionCount.useQuery({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-    searchQuery: searchQuery.trim() || undefined,
-    recipientBank: recipientBank,
-    paymentMethod: paymentMethod,
-    walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+  // Get total count for pagination - using getTransactions to get count
+  const { data: totalCount } = api.wallet.getTransactions.useQuery({
+    limit: 1,
+    offset: 0,
+    startDate: dateRange.startDate?.toISOString(),
+    endDate: dateRange.endDate?.toISOString(),
+    search: searchQuery.trim() || undefined,
+    bankFilter: recipientBank,
+    paymentMethodFilter: paymentMethod,
+    walletId: selectedWalletIds.length > 0 ? selectedWalletIds[0] : undefined,
   }, {
     enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
+    select: (data) => data.total,
   });
 
   // Get summary with date filtering and selected wallets
   const { data: summary } = api.wallet.getSummary.useQuery({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-    walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
+    startDate: dateRange.startDate?.toISOString() || new Date().toISOString(),
+    endDate: dateRange.endDate?.toISOString() || new Date().toISOString(),
   }, {
     enabled: selectedWalletIds.length > 0, // Only fetch when wallets are selected
   });
 
   // Get user wallets
-  const { data: walletsData = [] } = api.wallet.getWallets.useQuery();
+  const { data: walletsData = [] } = api.wallet.getAll.useQuery();
 
   // Check if user has any non-uncategorized wallets
   const hasWallets = walletsData.some(wallet => wallet.name !== 'Uncategorized');
@@ -150,17 +152,17 @@ export default function WalletPage() {
     }
   }, [walletsData]); // Remove selectedWalletIds.length dependency to allow empty selection
 
-  // Auto-resync effect - runs when wallets are updated or on initial load
-  useEffect(() => {
-    if (hasWallets && walletsData.some(wallet => wallet.accountNumber)) {
-      // Only trigger if user has wallets with account numbers
-      const timer = setTimeout(() => {
-        autoResyncMutation.mutate({ maxResults: 100 });
-      }, 2000); // 2 second delay to avoid too frequent calls
+  // Auto-resync effect - disabled for now since syncTransactions doesn't exist
+  // useEffect(() => {
+  //   if (hasWallets && walletsData.some(wallet => wallet.accountNumber)) {
+  //     // Only trigger if user has wallets with account numbers
+  //     const timer = setTimeout(() => {
+  //       autoResyncMutation.mutate({ maxResults: 100 });
+  //     }, 2000); // 2 second delay to avoid too frequent calls
 
-      return () => clearTimeout(timer);
-    }
-  }, [hasWallets, walletsData.length]); // Trigger when wallets change
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [hasWallets, walletsData.length]); // Trigger when wallets change
 
   // Get banks for wallet form
   const { data: banksData = [] } = api.masterData.getBanks.useQuery();
@@ -168,60 +170,10 @@ export default function WalletPage() {
   // Get tRPC utils for query invalidation
   const utils = api.useUtils();
 
-  // Auto-resync mutation
-  const autoResyncMutation = api.wallet.syncTransactions.useMutation({
-    onMutate: () => {
-      // Set global loading when starting sync
-      setLoading(true, "Syncing emails and updating transactions...");
-    },
-    onSuccess: (data) => {
-      // Invalidate with specific parameters to ensure proper refetch
-      utils.wallet.getTransactions.invalidate({
-        limit: pageSize,
-        offset: currentPage * pageSize,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        searchQuery: searchQuery.trim() || undefined,
-        recipientBank: recipientBank,
-        paymentMethod: paymentMethod,
-        sortBy: sortBy,
-        sortOrder: sortOrder,
-        walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
-      });
-
-      utils.wallet.getTransactionCount.invalidate({
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        searchQuery: searchQuery.trim() || undefined,
-        recipientBank: recipientBank,
-        paymentMethod: paymentMethod,
-        walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
-      });
-
-      utils.wallet.getSummary.invalidate({
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        walletIds: selectedWalletIds.length > 0 ? selectedWalletIds : undefined,
-      });
-
-      utils.wallet.getWallets.invalidate();
-    },
-    onError: (error) => {
-      console.error("Auto-resync failed:", error);
-
-      // Check if it's an auth error and automatically sign out
-      if (error.message.includes('Gmail access token') || error.message.includes('Invalid Credentials') || error.message.includes('access_denied')) {
-        // Sign out after a short delay
-        setTimeout(() => {
-          signOut({ callbackUrl: "/signin" });
-        }, 2000);
-      }
-    },
-    onSettled: () => {
-      // Clear global loading when sync completes (success or error)
-      setLoading(false);
-    },
-  });
+  // Auto-resync mutation - disabled for now since syncTransactions doesn't exist
+  // const autoResyncMutation = api.wallet.syncTransactions.useMutation({
+  //   // ... mutation logic
+  // });
 
   const handleWalletSelectionChange = (newSelectedIds: string[]) => {
     // Simple wallet selection without bulk update

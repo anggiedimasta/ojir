@@ -138,31 +138,33 @@ export const walletQueries = {
       }
 
       if (input.startDate) {
-        conditions.push(gte(transactions.date, new Date(input.startDate)));
+        conditions.push(gte(transactions.transactionDate, new Date(input.startDate)));
       }
 
       if (input.endDate) {
-        conditions.push(lte(transactions.date, new Date(input.endDate)));
+        conditions.push(lte(transactions.transactionDate, new Date(input.endDate)));
       }
 
       if (input.search) {
         const searchCondition = or(
-          ilike(transactions.description, `%${input.search}%`),
-          ilike(transactions.merchant, `%${input.search}%`),
-          ilike(transactions.category, `%${input.search}%`)
+          ilike(transactions.recipient, `%${input.search}%`),
+          ilike(transactions.location, `%${input.search}%`),
+          ilike(transactions.transferPurpose, `%${input.search}%`)
         );
-        conditions.push(searchCondition);
+        if (searchCondition) {
+          conditions.push(searchCondition);
+        }
       }
 
       if (input.bankFilter) {
-        conditions.push(eq(transactions.bankCode, input.bankFilter));
+        conditions.push(eq(transactions.recipientBank, input.bankFilter));
       }
 
       if (input.paymentMethodFilter) {
-        conditions.push(eq(transactions.paymentMethod, input.paymentMethodFilter));
+        conditions.push(eq(transactions.transactionType, input.paymentMethodFilter));
       }
 
-      const orderBy = input.sortOrder === 'desc' ? desc(transactions[input.sortBy]) : asc(transactions[input.sortBy]);
+      const orderBy = input.sortOrder === 'desc' ? desc(transactions.transactionDate) : asc(transactions.transactionDate);
 
       const results = await ctx.db
         .select()
@@ -179,7 +181,7 @@ export const walletQueries = {
 
       return {
         transactions: results,
-        total: total[0].count,
+        total: total[0]?.count || 0,
         hasMore: results.length === input.limit,
       };
     }),
@@ -215,8 +217,8 @@ export const walletQueries = {
     .query(async ({ ctx, input }) => {
       const conditions = [
         eq(transactions.userId, ctx.session.user.id),
-        gte(transactions.date, new Date(input.startDate)),
-        lte(transactions.date, new Date(input.endDate)),
+        gte(transactions.transactionDate, new Date(input.startDate)),
+        lte(transactions.transactionDate, new Date(input.endDate)),
       ];
 
       const summary = await ctx.db
@@ -229,10 +231,10 @@ export const walletQueries = {
         .where(and(...conditions));
 
       return {
-        totalIncome: Number(summary[0].totalIncome),
-        totalExpense: Number(summary[0].totalExpense),
-        netAmount: Number(summary[0].totalIncome) - Number(summary[0].totalExpense),
-        transactionCount: Number(summary[0].transactionCount),
+        totalIncome: Number(summary[0]?.totalIncome || 0),
+        totalExpense: Number(summary[0]?.totalExpense || 0),
+        netAmount: Number(summary[0]?.totalIncome || 0) - Number(summary[0]?.totalExpense || 0),
+        transactionCount: Number(summary[0]?.transactionCount || 0),
       };
     }),
 

@@ -181,50 +181,47 @@ export default function CalendarPage() {
           {/* Calendar Header */}
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                color="gray"
-                size="icon"
-                rounded="full"
-                onClick={isMonth ? prevMonth : isWeek ? prevWeek : prevDay}
-                aria-label={isMonth ? 'Previous Month' : isWeek ? 'Previous Week' : 'Previous Day'}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+                              <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={isMonth ? prevMonth : isWeek ? prevWeek : prevDay}
+                  aria-label={isMonth ? 'Previous Month' : isWeek ? 'Previous Week' : 'Previous Day'}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
               <h2 className="text-xl font-semibold">
                 {isMonth ? formatDate(currentDate) : isWeek ? formatWeek(currentDate) : formatDay(currentDate)}
               </h2>
-              <Button
-                color="gray"
-                size="icon"
-                rounded="full"
-                onClick={isMonth ? nextMonth : isWeek ? nextWeek : nextDay}
-                aria-label={isMonth ? 'Next Month' : isWeek ? 'Next Week' : 'Next Day'}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                              <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full"
+                  onClick={isMonth ? nextMonth : isWeek ? nextWeek : nextDay}
+                  aria-label={isMonth ? 'Next Month' : isWeek ? 'Next Week' : 'Next Day'}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                color="gray"
-                active={currentView === 'month'}
-                onClick={() => updateView('month')}
-              >
-                Month
-              </Button>
-              <Button
-                color="gray"
-                active={currentView === 'week'}
-                onClick={() => updateView('week')}
-              >
-                Week
-              </Button>
-              <Button
-                color="gray"
-                active={currentView === 'day'}
-                onClick={() => updateView('day')}
-              >
-                Day
-              </Button>
+                              <Button
+                  variant={currentView === 'month' ? 'secondary' : 'outline'}
+                  onClick={() => updateView('month')}
+                >
+                  Month
+                </Button>
+                <Button
+                  variant={currentView === 'week' ? 'secondary' : 'outline'}
+                  onClick={() => updateView('week')}
+                >
+                  Week
+                </Button>
+                <Button
+                  variant={currentView === 'day' ? 'secondary' : 'outline'}
+                  onClick={() => updateView('day')}
+                >
+                  Day
+                </Button>
             </div>
           </div>
 

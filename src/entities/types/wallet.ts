@@ -110,6 +110,34 @@ export type CreateTransactionInput = {
   virtualAccountNo?: string;
 };
 
+export type UpdateTransactionInput = {
+  id: string;
+  recipient?: string;
+  location?: string;
+  amount?: number;
+  fee?: number;
+  totalAmount?: number;
+  currency?: string;
+  transactionDate?: Date;
+  transactionRefNo?: string;
+  qrisRefNo?: string;
+  merchantPan?: string;
+  customerPan?: string;
+  acquirer?: string;
+  terminalId?: string;
+  sourceOfFund?: string;
+  sourceAccount?: string;
+  recipientBank?: string;
+  recipientBankAccount?: string;
+  transferPurpose?: string;
+  bankSender?: string;
+  emailSubject?: string;
+  transactionType?: string;
+  status?: string;
+  direction?: "in" | "out";
+  virtualAccountNo?: string;
+};
+
 export type SyncEmailsInput = {
   maxResults?: number;
   pageToken?: string;

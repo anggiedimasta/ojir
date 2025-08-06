@@ -1,7 +1,113 @@
-// Schema definitions
+// Core schemas - export specific schemas to avoid conflicts
 export * from './common';
+
+// Auth schemas
 export * from './auth';
+
+// Wallet schemas
 export * from './wallet';
+
+// Calendar schemas
 export * from './calendar';
-export * from './api';
-export * from './ui';
+
+// API schemas (avoiding conflicts with common and auth)
+export type {
+  ApiRequestSchema,
+  ApiResponseSchema,
+  ApiErrorSchema,
+  PaginationParamsSchema,
+  PaginationResponseSchema,
+  FilterParamsSchema,
+  SortParamsSchema,
+  SearchParamsSchema
+} from './api';
+
+// UI schemas (avoiding conflicts with common and calendar)
+export type {
+  ComponentPropsSchema,
+  ResponsiveValueSchema,
+  AnimationConfigSchema,
+  TransitionConfigSchema,
+  AriaPropsSchema,
+  LocaleConfigSchema,
+  LazyLoadConfigSchema,
+  VirtualScrollConfigSchema,
+  ErrorBoundaryStateSchema,
+  ErrorFallbackPropsSchema,
+  ThemeContextTypeSchema,
+  AuthContextTypeSchema,
+  UseLocalStorageReturnSchema,
+  UseDebounceReturnSchema,
+  UseIntersectionObserverReturnSchema,
+  UseClickOutsideReturnSchema,
+  UseHoverReturnSchema,
+  UseKeyPressReturnSchema,
+  UseMediaQueryReturnSchema,
+  KeyboardEventHandlerSchema,
+  MouseEventHandlerSchema,
+  ChangeEventHandlerSchema,
+  FocusEventHandlerSchema,
+  FormEventHandlerSchema,
+  RefCallbackSchema,
+  RefObjectSchema,
+  ReactNodeSchema,
+  ReactElementSchema,
+  ReactChildSchema,
+  ReactChildrenSchema,
+  CSSPropertiesSchema,
+  CSSClassNameSchema,
+  CSSVariableSchema,
+  CSSColorSchema,
+  CSSSizeSchema,
+  CSSSpacingSchema,
+  LayoutDirectionSchema,
+  FlexDirectionSchema,
+  JustifyContentSchema,
+  AlignItemsSchema,
+  PositionSchema,
+  DisplaySchema,
+  GridTemplateSchema,
+  GridAreaSchema,
+  GridGapSchema,
+  ZIndexSchema,
+  BorderRadiusSchema,
+  BorderWidthSchema,
+  BorderStyleSchema,
+  BorderColorSchema,
+  BoxShadowSchema,
+  TextShadowSchema,
+  FontFamilySchema,
+  FontSizeSchema,
+  FontWeightSchema,
+  LineHeightSchema,
+  TextAlignSchema,
+  TextTransformSchema,
+  TextDecorationSchema,
+  MarginSchema,
+  PaddingSchema,
+  GapSchema,
+  WidthSchema,
+  HeightSchema,
+  MinWidthSchema,
+  MaxWidthSchema,
+  MinHeightSchema,
+  MaxHeightSchema,
+  OverflowSchema,
+  CursorSchema,
+  UserSelectSchema,
+  PointerEventsSchema,
+  TransformSchema,
+  TransformOriginSchema,
+  TransitionPropertySchema,
+  TransitionDurationSchema,
+  TransitionTimingFunctionSchema,
+  TransitionDelaySchema,
+  AnimationNameSchema,
+  AnimationDurationSchema,
+  AnimationTimingFunctionSchema,
+  AnimationDelaySchema,
+  AnimationIterationCountSchema,
+  AnimationDirectionSchema,
+  AnimationFillModeSchema,
+  AnimationPlayStateSchema
+} from './ui';

@@ -179,9 +179,9 @@ export default function CalendarPage() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button
-                color="gray"
+                variant="outline"
                 size="icon"
-                rounded="full"
+                className="rounded-full"
                 onClick={isMonth ? prevMonth : isWeek ? prevWeek : prevDay}
                 aria-label={isMonth ? 'Previous Month' : isWeek ? 'Previous Week' : 'Previous Day'}
               >
@@ -191,9 +191,9 @@ export default function CalendarPage() {
                 {isMonth ? formatDate(currentDate) : isWeek ? formatWeek(currentDate) : formatDay(currentDate)}
               </h2>
               <Button
-                color="gray"
+                variant="outline"
                 size="icon"
-                rounded="full"
+                className="rounded-full"
                 onClick={isMonth ? nextMonth : isWeek ? nextWeek : nextDay}
                 aria-label={isMonth ? 'Next Month' : isWeek ? 'Next Week' : 'Next Day'}
               >
@@ -202,22 +202,19 @@ export default function CalendarPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                color="gray"
-                active={currentView === 'month'}
+                variant={currentView === 'month' ? 'secondary' : 'outline'}
                 onClick={() => updateView('month')}
               >
                 Month
               </Button>
               <Button
-                color="gray"
-                active={currentView === 'week'}
+                variant={currentView === 'week' ? 'secondary' : 'outline'}
                 onClick={() => updateView('week')}
               >
                 Week
               </Button>
               <Button
-                color="gray"
-                active={currentView === 'day'}
+                variant={currentView === 'day' ? 'secondary' : 'outline'}
                 onClick={() => updateView('day')}
               >
                 Day
