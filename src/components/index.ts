@@ -1,14 +1,21 @@
-// Atomic Design Component Library
-// This file exports all components organized by their atomic design level
+// Layout Components
+export * from './layout';
 
-// Atoms - Basic building blocks
-export * from './atoms';
+// Form Components
+export * from './forms';
 
-// Molecules - Simple groups of atoms working together
-export * from './molecules';
+// Modal Components
+export * from './modals';
 
-// Organisms - Complex components made up of molecules and/or atoms
-export * from './organisms';
+// Table Components
+export * from './tables';
 
-// Templates - Page-level objects that define the overall layout and structure
-export * from './templates';
+// Chart Components
+export * from './charts';
+
+// Feature Components
+export * from './features/wallet';
+export * from './features/calendar';
+
+// UI Components
+export * from './ui';

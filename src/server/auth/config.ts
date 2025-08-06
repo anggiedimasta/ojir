@@ -3,7 +3,7 @@ import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { and, eq } from "drizzle-orm";
 
-import { env } from "~/env";
+import { env } from "~/config/env";
 import { db } from "~/server/db";
 import { authUsers, authAccounts, authSessions, authVerificationTokens } from "~/server/db/schema";
 

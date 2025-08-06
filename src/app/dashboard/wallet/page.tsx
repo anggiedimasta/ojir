@@ -12,10 +12,9 @@ import { WalletList } from "~/components/wallet/wallet-list";
 import { TransactionEditForm } from "~/components/wallet/transaction-edit-form";
 import { WalletFormModal } from "~/components/wallet/wallet-form-modal";
 import { BulkUpdateModal } from "~/components/wallet/bulk-update-modal";
-import { useWalletManagement } from "~/hooks/use-wallet-management";
-import { useBulkUpdate } from "~/hooks/use-bulk-update";
-import { useTransactionManagement } from "~/hooks/use-transaction-management";
-import { formatCurrency, formatDate } from "~/utils/formatters";
+import { useWalletManagement } from "~/hooks/features/wallet";
+import { useBulkUpdate, useTransactionManagement } from "~/hooks/features/wallet";
+import { formatCurrency, formatDate } from "~/utils/formatting";
 
 import type { DateRange } from "~/entities/api/wallet";
 
