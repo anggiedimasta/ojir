@@ -30,11 +30,9 @@ export function DateInput({
 				</label>
 			)}
 			<div className="relative">
-				<Icon
-					icon={Calendar}
-					size="sm"
-					className="-translate-y-1/2 absolute top-1/2 left-3 transform text-slate-400"
-				/>
+				<div className="-translate-y-1/2 absolute top-1/2 left-3 flex h-4 w-4 items-center justify-center text-slate-400">
+					<Icon icon={Calendar} size="sm" />
+				</div>
 				<Input
 					id={inputId}
 					type="date"
