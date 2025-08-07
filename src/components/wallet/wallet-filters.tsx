@@ -2,7 +2,7 @@ import { Card } from "~/components/ui/card";
 import { DateFilter } from "~/components/ui/date-filter";
 import { SearchInput } from "~/components/ui/search-input";
 import { SortControls } from "~/components/ui/sort-controls";
-import { DateRangeDisplay } from "~/components/ui/date-range-display";
+
 import { BankFilter } from "~/components/ui/bank-filter";
 import { PaymentMethodFilter } from "~/components/ui/payment-method-filter";
 import { LimitFilter } from "~/components/ui/limit-filter";
@@ -48,6 +48,7 @@ export function WalletFilters({
             customEndDate={customEndDate}
             onCustomStartDateChange={onCustomStartDateChange}
             onCustomEndDateChange={onCustomEndDateChange}
+            dateRange={dateRange}
           />
 
           <BankFilter
@@ -107,12 +108,7 @@ export function WalletFilters({
         </div>
       </div>
 
-      <DateRangeDisplay
-        dateFilter={dateFilter}
-        startDate={dateRange.startDate}
-        endDate={dateRange.endDate}
-        className="mt-3"
-      />
+
     </Card>
   );
 }

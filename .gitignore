@@ -49,3 +49,6 @@ logs/
 
 # idea files
 .idea
+
+# google service account
+google-service-account.json

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.2",
+    "@google-cloud/pubsub": "^5.1.0",
     "@headlessui/react": "^2.2.4",
     "@hookform/resolvers": "^5.2.1",
     "@neondatabase/serverless": "^1.0.0",
@@ -39,6 +40,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "decimal.js": "^10.6.0",
+    "dotenv": "^17.2.1",
     "drizzle-orm": "^0.41.0",
     "framer-motion": "^12.15.0",
     "googleapis": "^149.0.0",

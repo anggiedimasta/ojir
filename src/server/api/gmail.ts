@@ -184,9 +184,9 @@ function parseBankMandiriTopUpEmail(htmlContent: string, actualSender?: string):
     const dateStr = dateMatch?.[1]?.trim();
     const timeStr = timeMatch?.[1]?.trim();
 
-    // Extract amounts
-    const topUpAmountMatch = decodedHtml.match(/<td[^>]*>Top-up Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
-    const transactionFeeMatch = decodedHtml.match(/<td[^>]*>Transaction Fee<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    // Extract amounts - for top-ups we have Top-up Amount, Transaction Fee, and Total
+    const topUpAmountMatch = decodedHtml.match(/<td[^>]*>Top-up\s*Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+    const transactionFeeMatch = decodedHtml.match(/<td[^>]*>Transaction\s*Fee<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
     const totalAmountMatch = decodedHtml.match(/<td[^>]*>Total<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
 
     const topUpAmount = parseIndonesianRupiah(topUpAmountMatch?.[1]?.trim() || '0');
@@ -202,8 +202,17 @@ function parseBankMandiriTopUpEmail(htmlContent: string, actualSender?: string):
     const sourceOfFund = sourceMatch?.[1]?.trim() || '';
     const sourceAccount = sourceMatch?.[2]?.trim() || '';
 
+    // Debug logging for top-up extraction
+    console.log('🔍 Debug: Top-up amounts extracted:', {
+      serviceProvider,
+      topUpAmount,
+      transactionFee,
+      totalAmount,
+      transactionRefNo
+    });
+
     // Validate required fields
-    if (!serviceProvider || !totalAmount || totalAmount <= 0) {
+    if (!serviceProvider || !topUpAmount || topUpAmount <= 0) {
       return null;
     }
 
@@ -211,9 +220,9 @@ function parseBankMandiriTopUpEmail(htmlContent: string, actualSender?: string):
       recipient: serviceProvider,
       location: '',
       transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
-      amount: totalAmount,
-      fee: 0, // No fee for top-ups
-      totalAmount: totalAmount,
+      amount: topUpAmount, // Use Top-up Amount (the base amount)
+      fee: transactionFee, // Use Transaction Fee
+      totalAmount: totalAmount, // Use Total (amount + fee)
       currency: 'IDR',
       transactionRefNo,
       sourceOfFund,
@@ -223,8 +232,8 @@ function parseBankMandiriTopUpEmail(htmlContent: string, actualSender?: string):
       transferPurpose: '',
       bankSender: actualSender || '',
       emailSubject: '',
-      transactionType: '',
-      status: '',
+      transactionType: 'top-up',
+      status: 'successful',
       direction: 'out',
       serviceProvider,
       accountNumber: accountNumber || '',
@@ -354,15 +363,16 @@ function parseBankMandiriMerchantEmail(htmlContent: string, actualSender?: strin
       return null;
     }
 
-    // Extract recipient merchant name
+    // Extract recipient merchant name - improved pattern to handle various HTML structures
     const recipientMatch = decodedHtml.match(/<p[^>]*>Recipient<\/p>[^<]*<h4[^>]*>([^<]+)<\/h4>/is) ||
-                          decodedHtml.match(/<h4[^>]*style[^>]*text-align:left[^>]*>([^<]+)<\/h4>/is);
+                          decodedHtml.match(/<h4[^>]*style[^>]*text-align:left[^>]*>([^<]+)<\/h4>/is) ||
+                          decodedHtml.match(/Recipient[^<]*<[^>]*>([^<]+)<\/h4>/is) ||
+                          decodedHtml.match(/<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>JAKARTA[^<]*<\/p>/is);
     const recipient = recipientMatch?.[1]?.trim() || '';
 
-    // Extract location
-    const locationMatch = decodedHtml.match(/<p[^>]*>([^<]*JAKARTA[^<]*-[^<]*ID[^<]*)<\/p>/is) ||
-                         decodedHtml.match(/>(JAKARTA[^<]*-[^<]*ID[^<]*)</is);
-    const location = locationMatch?.[1]?.trim() || '';
+    // Extract location - look for <p> tag after the merchant name (h4)
+    const locationMatch = decodedHtml.match(/<h4[^>]*>([^<]+)<\/h4>[^<]*<p[^>]*>([^<]+)<\/p>/is);
+    const location = locationMatch?.[2]?.trim() || '';
 
     // Extract acquirer
     const acquirerMatch = decodedHtml.match(/<td[^>]*>Acquirer<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
@@ -377,14 +387,18 @@ function parseBankMandiriMerchantEmail(htmlContent: string, actualSender?: strin
     const dateStr = dateMatch?.[1]?.trim();
     const timeStr = timeMatch?.[1]?.trim();
 
-    // Extract transaction amount
+    // Extract transaction amount - improved pattern to handle various HTML structures
     const amountMatch = decodedHtml.match(/<td[^>]*>Transaction\s*Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is) ||
-                       decodedHtml.match(/<td[^>]*>Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is);
+                       decodedHtml.match(/<td[^>]*>Amount<\/td>\s*<td[^>]*>Rp\s*([\d,.]+)<\/td>/is) ||
+                       decodedHtml.match(/Transaction\s*Amount[^<]*<[^>]*>Rp\s*([\d,.]+)/is) ||
+                       decodedHtml.match(/Amount[^<]*<[^>]*>Rp\s*([\d,.]+)/is);
     const amount = parseIndonesianRupiah(amountMatch?.[1]?.trim() || '0');
 
-    // Extract transaction reference
+    // Extract transaction reference - improved pattern to handle various HTML structures
     const refMatch = decodedHtml.match(/<td[^>]*>Transaction\s*Ref[^<]*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
-                    decodedHtml.match(/<td[^>]*>Reference\s*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is);
+                    decodedHtml.match(/<td[^>]*>Reference\s*No[^<]*<\/td>\s*<td[^>]*>([^<]+)<\/td>/is) ||
+                    decodedHtml.match(/Transaction\s*Ref[^<]*No[^<]*[^<]*<[^>]*>([^<]+)/is) ||
+                    decodedHtml.match(/Reference\s*No[^<]*[^<]*<[^>]*>([^<]+)/is);
     const transactionRefNo = refMatch?.[1]?.trim() || '';
 
     // Extract additional fields for merchant payments
@@ -516,14 +530,26 @@ function parseBankMandiriMerchantEmail(htmlContent: string, actualSender?: strin
       }
     }
 
-
-
-
-
     // Validate required fields
     if (!recipient || !amount || amount <= 0) {
+      console.log('🔍 Debug: Mandiri merchant payment validation failed:', {
+        recipient,
+        amount,
+        transactionRefNo
+      });
       return null;
     }
+
+    // Debug logging for successful extraction
+    console.log('🔍 Debug: Mandiri merchant payment extracted successfully:', {
+      recipient,
+      amount,
+      totalAmount: amount,
+      transactionRefNo,
+      location,
+      dateStr,
+      timeStr
+    });
 
     // Final fallback: remove masking from source account if it still has it
     const finalSourceAccount = sourceAccount.replace(/^\*{4}/, '') || '';
@@ -592,27 +618,32 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject
     // Try parsing as top-up email first
     const topUpData = parseBankMandiriTopUpEmail(htmlContent, actualSender);
     if (topUpData) {
-      return {
-        recipient: topUpData.recipient,
-        location: topUpData.location,
-        transactionDate: topUpData.transactionDate,
-        amount: topUpData.amount,
-        currency: topUpData.currency,
-        transactionRefNo: topUpData.transactionRefNo,
-        qrisRefNo: topUpData.qrisRefNo,
-        merchantPan: topUpData.merchantPan,
-        customerPan: topUpData.customerPan,
-        acquirer: topUpData.acquirer,
-        terminalId: topUpData.terminalId,
-        sourceOfFund: topUpData.sourceOfFund,
-        sourceAccount: topUpData.sourceAccount,
-        bankSender: topUpData.bankSender,
-        emailSubject: actualSubject || topUpData.emailSubject,
-        transactionType: topUpData.transactionType,
-        status: topUpData.status,
-        direction: topUpData.direction,
-        virtualAccountNo: topUpData.virtualAccountNo,
-      };
+          return {
+      recipient: topUpData.recipient,
+      location: topUpData.location,
+      transactionDate: topUpData.transactionDate,
+      amount: topUpData.amount,
+      fee: topUpData.fee,
+      totalAmount: topUpData.totalAmount,
+      currency: topUpData.currency,
+      transactionRefNo: topUpData.transactionRefNo,
+      qrisRefNo: topUpData.qrisRefNo,
+      merchantPan: topUpData.merchantPan,
+      customerPan: topUpData.customerPan,
+      acquirer: topUpData.acquirer,
+      terminalId: topUpData.terminalId,
+      sourceOfFund: topUpData.sourceOfFund,
+      sourceAccount: topUpData.sourceAccount,
+      recipientBank: topUpData.recipientBank,
+      recipientBankAccount: topUpData.recipientBankAccount,
+      transferPurpose: topUpData.transferPurpose,
+      bankSender: topUpData.bankSender,
+      emailSubject: actualSubject || topUpData.emailSubject,
+      transactionType: topUpData.transactionType,
+      status: topUpData.status,
+      direction: topUpData.direction,
+      virtualAccountNo: topUpData.virtualAccountNo,
+    };
     }
 
     // Try parsing as transfer email
@@ -623,6 +654,8 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject
         location: transferData.location,
         transactionDate: transferData.transactionDate,
         amount: transferData.amount,
+        fee: transferData.fee,
+        totalAmount: transferData.totalAmount,
         currency: transferData.currency,
         transactionRefNo: transferData.transactionRefNo,
         qrisRefNo: transferData.qrisRefNo,
@@ -632,6 +665,9 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject
         terminalId: transferData.terminalId,
         sourceOfFund: transferData.sourceOfFund,
         sourceAccount: transferData.sourceAccount,
+        recipientBank: transferData.recipientBank,
+        recipientBankAccount: transferData.recipientBankAccount,
+        transferPurpose: transferData.transferPurpose,
         bankSender: transferData.bankSender,
         emailSubject: actualSubject || transferData.emailSubject,
         transactionType: transferData.transactionType,
@@ -644,11 +680,13 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject
     // Try parsing as merchant payment email
     const merchantData = parseBankMandiriMerchantEmail(htmlContent, actualSender);
     if (merchantData) {
-    return {
+      return {
         recipient: merchantData.recipient,
         location: merchantData.location,
         transactionDate: merchantData.transactionDate,
         amount: merchantData.amount,
+        fee: merchantData.fee,
+        totalAmount: merchantData.totalAmount,
         currency: merchantData.currency,
         transactionRefNo: merchantData.transactionRefNo,
         qrisRefNo: merchantData.qrisRefNo,
@@ -658,6 +696,9 @@ export function parseBankMandiriEmailFromHtml(htmlContent: string, actualSubject
         terminalId: merchantData.terminalId,
         sourceOfFund: merchantData.sourceOfFund,
         sourceAccount: merchantData.sourceAccount,
+        recipientBank: merchantData.recipientBank,
+        recipientBankAccount: merchantData.recipientBankAccount,
+        transferPurpose: merchantData.transferPurpose,
         bankSender: merchantData.bankSender,
         emailSubject: actualSubject || merchantData.emailSubject,
         transactionType: merchantData.transactionType,
@@ -816,10 +857,15 @@ function parseTopUpFromText(emailBody: string, subjectHeader: string, actualSend
       location: '',
       transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount: totalAmount,
+      fee: 0, // No fee for top-ups
+      totalAmount: totalAmount,
       currency: 'IDR',
       transactionRefNo,
       sourceOfFund: '',
       sourceAccount: finalSourceAccount,
+      recipientBank: '', // Not applicable for top-ups
+      recipientBankAccount: '', // Not applicable for top-ups
+      transferPurpose: '', // Not applicable for top-ups
       bankSender: actualSender || '',
       emailSubject: subjectHeader,
       transactionType: '',
@@ -884,10 +930,15 @@ function parseTransferFromText(emailBody: string, subjectHeader: string, isQRTra
       location,
       transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount,
+      fee: 0, // No fee for transfers
+      totalAmount: amount,
       currency: 'IDR',
       transactionRefNo,
       sourceOfFund: '',
       sourceAccount: finalSourceAccount,
+      recipientBank: location, // Use location as recipient bank for transfers
+      recipientBankAccount: '', // Not available in text format
+      transferPurpose: '', // Not available in text format
       bankSender: actualSender || '',
       emailSubject: subjectHeader,
       transactionType: '',
@@ -945,10 +996,15 @@ function parseSimplePLNPrabayar(emailBody: string, subjectHeader: string, actual
       location: '',
       transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount,
+      fee: 0, // No fee for top-ups
+      totalAmount: amount,
       currency: 'IDR',
       transactionRefNo,
       sourceOfFund,
       sourceAccount: finalSourceAccount,
+      recipientBank: '', // Not applicable for top-ups
+      recipientBankAccount: '', // Not applicable for top-ups
+      transferPurpose: '', // Not applicable for top-ups
       bankSender: actualSender || '',
       emailSubject: subjectHeader,
       transactionType: 'top-up',
@@ -975,11 +1031,18 @@ function parseMerchantPaymentFromText(emailBody: string, subjectHeader: string, 
       recipient = recipient.replace(/^:\s*/, '');
     }
 
-    // Extract location
-    const locationMatch = emailBody.match(/(JAKARTA\s+BARAT\s*-\s*ID)/i) ||
-                         emailBody.match(/(JAKARTA\s+TIMUR\s*-\s*ID)/i) ||
-                         emailBody.match(/([A-Z\s]+)\s*-\s*ID/);
-    const location = locationMatch?.[1]?.trim() || '';
+    // Extract location - look for location after recipient name
+    const locationMatch = emailBody.match(/Recipient[^]*?([^]*?)\s*(?:Date|Time|Transaction|$)/i);
+    let location = '';
+    if (locationMatch && locationMatch[1]) {
+      // Extract the location part (usually after the merchant name)
+      const locationPart = locationMatch[1].trim();
+      // Look for location pattern (CITY - COUNTRY format)
+      const cityCountryMatch = locationPart.match(/([A-Z\s]+)\s*-\s*([A-Z]+)/i);
+      if (cityCountryMatch) {
+        location = cityCountryMatch[0].trim();
+      }
+    }
 
     // Extract acquirer
     const acquirerMatch = emailBody.match(/Acquirer\s+([^\n\r]+)/i);
@@ -1071,6 +1134,8 @@ function parseMerchantPaymentFromText(emailBody: string, subjectHeader: string, 
       location,
       transactionDate: parseBankMandiriDateTime(dateStr || '', timeStr || ''),
       amount,
+      fee: 0, // No fee for merchant payments
+      totalAmount: amount, // Same as amount for merchant payments
       currency: 'IDR',
       transactionRefNo,
       qrisRefNo: qrisRefMatch?.[1],
@@ -1080,6 +1145,9 @@ function parseMerchantPaymentFromText(emailBody: string, subjectHeader: string, 
       terminalId: terminalIdMatch?.[1],
       sourceOfFund: sourceOfFund || '',
       sourceAccount: finalSourceAccount,
+      recipientBank: '', // Not applicable for merchant payments
+      recipientBankAccount: '', // Not applicable for merchant payments
+      transferPurpose: '', // Not applicable for merchant payments
       bankSender: actualSender || '',
       emailSubject: subjectHeader,
       transactionType: '',

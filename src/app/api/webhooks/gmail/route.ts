@@ -5,6 +5,7 @@ import { transactions, wallets } from '~/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { parseTransactionEmail } from '~/server/api/gmail';
 import { google } from 'googleapis';
+import { publishers } from '~/lib/pubsub-client';
 
 // Verify the webhook is from Google
 async function verifyWebhook(request: NextRequest) {
@@ -37,7 +38,15 @@ export async function POST(request: NextRequest) {
       const notification = JSON.parse(data);
 
       if (notification.emailAddress && notification.historyId) {
-        // New email received, process it
+        // Publish Gmail notification to Pub/Sub for processing
+        await publishers.publishGmailNotification({
+          emailAddress: notification.emailAddress,
+          historyId: notification.historyId,
+          messageId: notification.messageId,
+          threadId: notification.threadId
+        });
+
+        // Process email immediately (you can also make this async via Pub/Sub)
         await processNewEmail(notification.emailAddress, notification.historyId);
       }
     }
@@ -126,12 +135,14 @@ async function saveTransaction(userId: string, parsedTransaction: any) {
 
     if (targetWallet[0]) {
       // Insert new transaction
-      await db.insert(transactions).values({
+      const newTransaction = await db.insert(transactions).values({
         userId: userId,
         walletId: targetWallet[0].id,
         recipient: parsedTransaction.recipient,
         location: parsedTransaction.location,
         amount: parsedTransaction.amount.toString(),
+        fee: parsedTransaction.fee.toString(),
+        totalAmount: parsedTransaction.totalAmount.toString(),
         currency: parsedTransaction.currency,
         transactionDate: parsedTransaction.transactionDate,
         transactionRefNo: parsedTransaction.transactionRefNo,
@@ -148,7 +159,36 @@ async function saveTransaction(userId: string, parsedTransaction: any) {
         status: parsedTransaction.status,
         direction: parsedTransaction.direction,
         virtualAccountNo: parsedTransaction.virtualAccountNo,
-      });
+      }).returning();
+
+      // Publish wallet update notification
+      if (newTransaction[0]) {
+        await publishers.publishWalletUpdate({
+          userId: userId,
+          walletId: targetWallet[0].id,
+          transactionId: newTransaction[0].id,
+          amount: parsedTransaction.amount,
+          type: parsedTransaction.direction === 'debit' ? 'debit' : 'credit',
+          balance: 0, // You should calculate actual balance here
+          updatedAt: new Date().toISOString()
+        });
+
+        // Publish user notification
+        await publishers.publishNotificationEvent({
+          userId: userId,
+          type: 'transaction',
+          title: 'New Transaction',
+          message: `${parsedTransaction.direction === 'debit' ? 'Debit' : 'Credit'} of ${parsedTransaction.currency} ${parsedTransaction.amount.toLocaleString()}`,
+          data: {
+            transactionId: newTransaction[0].id,
+            amount: parsedTransaction.amount,
+            recipient: parsedTransaction.recipient,
+            transactionRefNo: parsedTransaction.transactionRefNo
+          },
+          priority: 'medium',
+          createdAt: new Date().toISOString()
+        });
+      }
     }
   } catch (error) {
     console.error('Error saving transaction:', error);

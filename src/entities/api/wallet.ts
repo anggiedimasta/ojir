@@ -259,6 +259,8 @@ export interface ParsedTransaction {
   location: string;
   transactionDate: Date;
   amount: number;
+  fee: number;
+  totalAmount: number;
   currency: string;
   transactionRefNo: string;
   qrisRefNo?: string;
@@ -268,6 +270,9 @@ export interface ParsedTransaction {
   terminalId?: string;
   sourceOfFund: string;
   sourceAccount: string;
+  recipientBank?: string;
+  recipientBankAccount?: string;
+  transferPurpose?: string;
   bankSender: string;
   emailSubject: string;
   transactionType: string;

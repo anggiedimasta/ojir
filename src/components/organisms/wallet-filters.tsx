@@ -115,11 +115,7 @@ export function WalletFilters({
         </div>
       </div>
 
-      {getDateRangeDisplay() && (
-        <div className="text-xs text-slate-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 mt-3">
-          {getDateRangeDisplay()}
-        </div>
-      )}
+
     </Card>
   );
 }
