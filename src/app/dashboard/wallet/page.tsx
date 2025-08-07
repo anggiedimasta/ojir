@@ -24,7 +24,7 @@ export default function WalletPage() {
 	const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
 	const { isLoading, setLoading } = useLoadingStore();
 
-		// Wallet selection state
+	// Wallet selection state
 	const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
 
 	// Custom hooks

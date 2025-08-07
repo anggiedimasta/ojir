@@ -14,12 +14,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 import type { TransactionSummary } from "~/entities/api/wallet";
-import {
-	fetchGmailMessages,
-	parseTransactionEmail,
-	setupGmailPushNotifications,
-	stopGmailPushNotifications,
-} from "~/server/api/gmail";
+import { fetchGmailMessages, parseTransactionEmail } from "~/server/api/gmail";
 import { banks, transactions, wallets } from "~/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -1292,74 +1287,6 @@ export const walletRouter = createTRPCRouter({
 			deletedCount: result.length,
 			message: `Deleted ${result.length} transactions. You can now re-sync to get updated data.`,
 		};
-	}),
-
-	// Enable automatic email sync
-	enableAutoSync: protectedProcedure
-		.input(
-			z.object({
-				topicName: z.string().optional(),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			if (!ctx.accessToken) {
-				throw new AuthError(
-					"No Gmail access token available. Please sign out and sign in again to refresh your credentials.",
-				);
-			}
-
-			try {
-				const topicName =
-					input.topicName ||
-					(process.env.GOOGLE_CLOUD_PROJECT
-						? `projects/${process.env.GOOGLE_CLOUD_PROJECT}/topics/gmail-notifications`
-						: "default-topic");
-
-				const result = await setupGmailPushNotifications(
-					ctx.accessToken,
-					topicName,
-				);
-
-				// Store auto-sync preference in user settings (you'll need to implement this)
-				// await updateUserAutoSyncPreference(ctx.session.user.id, true);
-
-				return {
-					success: true,
-					message: "Automatic email sync enabled successfully",
-					data: result,
-				};
-			} catch (error) {
-				console.error("Error enabling auto sync:", error);
-				throw new Error(
-					`Failed to enable auto sync: ${error instanceof Error ? error.message : "Unknown error"}`,
-				);
-			}
-		}),
-
-	// Disable automatic email sync
-	disableAutoSync: protectedProcedure.mutation(async ({ ctx }) => {
-		if (!ctx.accessToken) {
-			throw new AuthError(
-				"No Gmail access token available. Please sign out and sign in again to refresh your credentials.",
-			);
-		}
-
-		try {
-			await stopGmailPushNotifications(ctx.accessToken);
-
-			// Store auto-sync preference in user settings (you'll need to implement this)
-			// await updateUserAutoSyncPreference(ctx.session.user.id, false);
-
-			return {
-				success: true,
-				message: "Automatic email sync disabled successfully",
-			};
-		} catch (error) {
-			console.error("Error disabling auto sync:", error);
-			throw new Error(
-				`Failed to disable auto sync: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		}
 	}),
 
 	// Remap existing transactions to correct wallets based on account number
