@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state'); // This contains the user ID
     const error = searchParams.get('error');
 
-    if (error) {
+        if (error) {
       console.error('OAuth error:', error);
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/gmail-setup?error=${error}`
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/settings?error=${error}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/gmail-setup?error=missing_code_or_state`
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/settings?error=missing_code_or_state`
       );
     }
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokens.access_token || !tokens.refresh_token) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/gmail-setup?error=token_exchange_failed`
+        `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/settings?error=token_exchange_failed`
       );
     }
 
@@ -48,15 +48,15 @@ export async function GET(request: NextRequest) {
     // Setup Gmail watch
     const watchResult = await setupGmailWatch(state, tokens.access_token);
 
-    // Redirect back to setup page with success
+    // Redirect back to settings page with success
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/gmail-setup?success=true&historyId=${watchResult.historyId}`
+      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/settings?success=true&historyId=${watchResult.historyId}`
     );
 
   } catch (error) {
     console.error('OAuth callback error:', error);
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/gmail-setup?error=callback_error`
+      `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/settings?error=callback_error`
     );
   }
 }

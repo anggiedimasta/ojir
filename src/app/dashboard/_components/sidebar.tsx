@@ -45,11 +45,6 @@ export function Sidebar() {
 			icon: <Wallet className="h-5 w-5" />,
 		},
 		{
-			href: "/dashboard/gmail-setup",
-			label: "Gmail Setup",
-			icon: <Mail className="h-5 w-5" />,
-		},
-		{
 			href: "/dashboard/profile",
 			label: "Profile",
 			icon: <User className="h-5 w-5" />,
