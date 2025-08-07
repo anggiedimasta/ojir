@@ -243,15 +243,6 @@ function parseBankMandiriTopUpEmail(
 		const sourceOfFund = sourceMatch?.[1]?.trim() || "";
 		const sourceAccount = sourceMatch?.[2]?.trim() || "";
 
-		// Debug logging for top-up extraction
-		console.log("🔍 Debug: Top-up amounts extracted:", {
-			serviceProvider,
-			topUpAmount,
-			transactionFee,
-			totalAmount,
-			transactionRefNo,
-		});
-
 		// Validate required fields
 		if (!serviceProvider || !topUpAmount || topUpAmount <= 0) {
 			return null;
@@ -695,48 +686,6 @@ function parseBankMandiriMerchantEmail(
 
 		const sourceOfFund = sourceMatch?.[1]?.trim() || "";
 		const sourceAccount = sourceMatch?.[2]?.trim() || "";
-
-		// Debug logging for the problematic transaction
-		if (transactionRefNo === "702507251831041775") {
-			console.log(
-				"🔍 Debug: Found problematic transaction, checking source of fund extraction...",
-			);
-			console.log("🔍 Debug: Current sourceOfFund:", sourceOfFund);
-			console.log("🔍 Debug: Current sourceAccount:", sourceAccount);
-
-			// Try to find the exact HTML structure around Source of Fund
-			const sourceOfFundSection = decodedHtml.match(
-				/<div[^>]*>Source of Fund<\/div>[\s\S]*?<\/div>/is,
-			);
-			if (sourceOfFundSection) {
-				console.log(
-					"🔍 Debug: Found Source of Fund section:",
-					sourceOfFundSection[0],
-				);
-			}
-		}
-
-		// Validate required fields
-		if (!recipient || !amount || amount <= 0) {
-			console.log("🔍 Debug: Mandiri merchant payment validation failed:", {
-				recipient,
-				amount,
-				transactionRefNo,
-			});
-			return null;
-		}
-
-		// Debug logging for successful extraction
-		console.log("🔍 Debug: Mandiri merchant payment extracted successfully:", {
-			recipient,
-			amount,
-			totalAmount: amount,
-			transactionRefNo,
-			location,
-			dateStr,
-			timeStr,
-		});
-
 		// Final fallback: remove masking from source account if it still has it
 		const finalSourceAccount = sourceAccount.replace(/^\*{4}/, "") || "";
 
