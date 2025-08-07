@@ -47,17 +47,17 @@ export function DateFilter({
 
 			{/* Custom Date Range Inputs */}
 			{dateFilter === "custom" && (
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<DateInput
 						value={customStartDate}
 						onChange={onCustomStartDateChange}
-						className="w-32"
+						className="w-28 text-sm"
 					/>
 					<span className="text-slate-500 text-xs">to</span>
 					<DateInput
 						value={customEndDate}
 						onChange={onCustomEndDateChange}
-						className="w-32"
+						className="w-28 text-sm"
 					/>
 				</div>
 			)}

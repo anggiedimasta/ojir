@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+	boolean,
 	foreignKey,
 	index,
 	integer,
@@ -42,6 +43,8 @@ export const ojirTransaction = pgTable(
 		updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }),
 		direction: text().default("out").notNull(),
 		virtualAccountNo: varchar("virtual_account_no", { length: 255 }),
+		categoryId: varchar("category_id", { length: 255 }),
+		subcategoryId: varchar("subcategory_id", { length: 255 }),
 	},
 	(table) => [
 		index("transaction_date_idx").using(
@@ -60,6 +63,16 @@ export const ojirTransaction = pgTable(
 			columns: [table.userId],
 			foreignColumns: [ojirUser.id],
 			name: "ojir_transaction_user_id_user_id_fk",
+		}),
+		foreignKey({
+			columns: [table.categoryId],
+			foreignColumns: [ojirCategory.id],
+			name: "ojir_transaction_category_id_ojir_category_id_fk",
+		}),
+		foreignKey({
+			columns: [table.subcategoryId],
+			foreignColumns: [ojirSubcategory.id],
+			name: "ojir_transaction_subcategory_id_ojir_subcategory_id_fk",
 		}),
 	],
 );
@@ -176,5 +189,70 @@ export const ojirAccount = pgTable(
 			columns: [table.provider, table.providerAccountId],
 			name: "ojir_account_provider_provider_account_id_pk",
 		}),
+	],
+);
+
+// Category tables
+export const ojirCategory = pgTable(
+	"ojir_category",
+	{
+		id: varchar({ length: 255 }).primaryKey().notNull(),
+		name: varchar({ length: 255 }).notNull(),
+		icon: varchar({ length: 50 }),
+		color: varchar({ length: 7 }).notNull(), // hex color
+		userId: varchar("user_id", { length: 255 }).notNull(),
+		isDefault: boolean().default(false).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }),
+	},
+	(table) => [
+		index("category_user_id_idx").using(
+			"btree",
+			table.userId.asc().nullsLast().op("text_ops"),
+		),
+		foreignKey({
+			columns: [table.userId],
+			foreignColumns: [ojirUser.id],
+			name: "ojir_category_user_id_ojir_user_id_fk",
+		}).onDelete("cascade"),
+	],
+);
+
+export const ojirSubcategory = pgTable(
+	"ojir_subcategory",
+	{
+		id: varchar({ length: 255 }).primaryKey().notNull(),
+		name: varchar({ length: 255 }).notNull(),
+		icon: varchar({ length: 50 }),
+		color: varchar({ length: 7 }).notNull(), // hex color
+		categoryId: varchar("category_id", { length: 255 }).notNull(),
+		userId: varchar("user_id", { length: 255 }).notNull(),
+		isDefault: boolean().default(false).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }),
+	},
+	(table) => [
+		index("subcategory_category_id_idx").using(
+			"btree",
+			table.categoryId.asc().nullsLast().op("text_ops"),
+		),
+		index("subcategory_user_id_idx").using(
+			"btree",
+			table.userId.asc().nullsLast().op("text_ops"),
+		),
+		foreignKey({
+			columns: [table.categoryId],
+			foreignColumns: [ojirCategory.id],
+			name: "ojir_subcategory_category_id_ojir_category_id_fk",
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.userId],
+			foreignColumns: [ojirUser.id],
+			name: "ojir_subcategory_user_id_ojir_user_id_fk",
+		}).onDelete("cascade"),
 	],
 );

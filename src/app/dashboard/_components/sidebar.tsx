@@ -4,23 +4,31 @@ import {
 	Calendar,
 	ChevronLeft,
 	ChevronRight,
-	Home,
 	LayoutDashboard,
-	Mail,
 	Settings,
 	User,
 	Wallet,
+	Tags,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { useSidebarStoreHydrated } from "../../../store/sidebar-store";
+
+interface NavigationItem {
+	href: string;
+	label: string;
+	icon: React.ReactNode;
+	adminOnly?: boolean;
+}
 
 export function Sidebar() {
 	const { isCollapsed, setCollapsed, hasHydrated } = useSidebarStoreHydrated();
 	const [hasMounted, setHasMounted] = useState(false);
+	const { data: session } = useSession();
 
 	useEffect(() => {
 		setHasMounted(true);
@@ -28,7 +36,10 @@ export function Sidebar() {
 
 	const pathname = usePathname();
 
-	const navigationItems = [
+	// Simple admin check - you can enhance this later with proper role-based system
+	const isAdmin = session?.user?.email === "anggiedimasta@gmail.com"; // Replace with your admin email
+
+	const navigationItems: NavigationItem[] = [
 		{
 			href: "/dashboard",
 			label: "Dashboard",
@@ -43,6 +54,12 @@ export function Sidebar() {
 			href: "/dashboard/wallet",
 			label: "Wallet",
 			icon: <Wallet className="h-5 w-5" />,
+		},
+		{
+			href: "/dashboard/categories",
+			label: "Categories",
+			icon: <Tags className="h-5 w-5" />,
+			adminOnly: true,
 		},
 		{
 			href: "/dashboard/profile",
@@ -99,20 +116,33 @@ export function Sidebar() {
 					{/* Navigation */}
 					<nav className="flex-1 p-4">
 						<div className="space-y-2">
-							{navigationItems.map((item) => (
-								<Button
-									key={item.href}
-									color="ghost"
-									className="w-full justify-start gap-2"
-									active={pathname === item.href}
-									asChild
-								>
-									<Link href={item.href}>
-										{item.icon}
-										{!isCollapsed && <span>{item.label}</span>}
-									</Link>
-								</Button>
-							))}
+							{navigationItems
+								.filter((item) => !item.adminOnly || isAdmin)
+								.map((item) => (
+									<Button
+										key={item.href}
+										color="ghost"
+										className={`w-full justify-start gap-2 ${
+											item.adminOnly ? "border-amber-500 border-l-2" : ""
+										}`}
+										active={pathname === item.href}
+										asChild
+									>
+										<Link href={item.href}>
+											{item.icon}
+											{!isCollapsed && (
+												<div className="flex items-center gap-2">
+													<span>{item.label}</span>
+													{item.adminOnly && (
+														<span className="font-medium text-amber-600 text-xs">
+															ADMIN
+														</span>
+													)}
+												</div>
+											)}
+										</Link>
+									</Button>
+								))}
 						</div>
 					</nav>
 				</div>

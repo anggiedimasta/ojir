@@ -12,6 +12,7 @@ import type {
 } from "~/entities/api/wallet";
 import { BankIcon } from "./bank-icon";
 import { Button } from "./button";
+import { CategoryPill } from "./category-pill";
 
 export function TransactionItem({
 	transaction,
@@ -210,6 +211,14 @@ export function TransactionItem({
 							{transaction.transferPurpose}
 						</span>
 					)}
+
+					{/* Category and Subcategory */}
+					<CategoryPill
+						categoryName={transaction.categoryName}
+						categoryIcon={transaction.categoryIcon}
+						subcategoryName={transaction.subcategoryName}
+						subcategoryIcon={transaction.subcategoryIcon}
+					/>
 
 					{transaction.location && (
 						<span className="text-slate-500 text-xs">

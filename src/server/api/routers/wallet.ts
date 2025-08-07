@@ -15,7 +15,13 @@ import {
 import { z } from "zod";
 import type { TransactionSummary } from "~/entities/api/wallet";
 import { fetchGmailMessages, parseTransactionEmail } from "~/server/api/gmail";
-import { banks, transactions, wallets } from "~/server/db/schema";
+import {
+	banks,
+	categories,
+	subcategories,
+	transactions,
+	wallets,
+} from "~/server/db/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 // Custom error class for auth errors that should trigger sign-out
@@ -561,6 +567,15 @@ export const walletRouter = createTRPCRouter({
 					createdAt: transactions.createdAt,
 					updatedAt: transactions.updatedAt,
 					virtualAccountNo: transactions.virtualAccountNo,
+					// Category information
+					categoryId: transactions.categoryId,
+					subcategoryId: transactions.subcategoryId,
+					categoryName: categories.name,
+					categoryIcon: categories.icon,
+					categoryColor: categories.color,
+					subcategoryName: subcategories.name,
+					subcategoryIcon: subcategories.icon,
+					subcategoryColor: subcategories.color,
 					// Wallet information
 					walletName: wallets.name,
 					walletType: wallets.type,
@@ -571,6 +586,11 @@ export const walletRouter = createTRPCRouter({
 				.from(transactions)
 				.leftJoin(wallets, eq(transactions.walletId, wallets.id))
 				.leftJoin(banks, eq(wallets.bankCode, banks.code))
+				.leftJoin(categories, eq(transactions.categoryId, categories.id))
+				.leftJoin(
+					subcategories,
+					eq(transactions.subcategoryId, subcategories.id),
+				)
 				.where(and(...conditions))
 				.orderBy(orderBy)
 				.limit(input.limit)
@@ -1124,6 +1144,18 @@ export const walletRouter = createTRPCRouter({
 							throw new Error("No valid wallet found for transaction");
 						}
 
+						// Get default uncategorized category
+						const uncategorizedCategory = await ctx.db
+							.select()
+							.from(categories)
+							.where(
+								and(
+									eq(categories.userId, ctx.session.user.id),
+									eq(categories.id, "uncategorized"),
+								),
+							)
+							.limit(1);
+
 						// Insert new transaction
 						const newTransaction = await ctx.db
 							.insert(transactions)
@@ -1151,6 +1183,8 @@ export const walletRouter = createTRPCRouter({
 								status: parsedTransaction.status,
 								direction: parsedTransaction.direction,
 								virtualAccountNo: parsedTransaction.virtualAccountNo,
+								categoryId: uncategorizedCategory[0]?.id || null,
+								subcategoryId: null, // Uncategorized has no subcategory
 							})
 							.returning();
 
@@ -1387,6 +1421,8 @@ export const walletRouter = createTRPCRouter({
 				transactionDate: z.date(),
 				direction: z.enum(["in", "out"]),
 				walletId: z.string().min(1),
+				categoryId: z.string().optional(),
+				subcategoryId: z.string().optional(),
 				recipientBank: z.string().optional(),
 				recipientBankAccount: z.string().optional(),
 				transferPurpose: z.string().optional(),
@@ -1437,7 +1473,7 @@ export const walletRouter = createTRPCRouter({
 					recipient: input.recipient,
 					location: input.location,
 					amount: input.amount.toString(),
-					fee: input.fee ? input.fee.toString() : "0.00",
+					fee: input.fee ? input.fee.toString() : "0",
 					totalAmount: input.totalAmount
 						? input.totalAmount.toString()
 						: input.amount.toString(),
@@ -1445,6 +1481,8 @@ export const walletRouter = createTRPCRouter({
 					transactionDate: input.transactionDate,
 					direction: input.direction,
 					walletId: input.walletId,
+					categoryId: input.categoryId || "uncategorized",
+					subcategoryId: input.subcategoryId || null,
 					recipientBank: input.recipientBank,
 					recipientBankAccount: input.recipientBankAccount,
 					transferPurpose: input.transferPurpose,
@@ -1456,4 +1494,101 @@ export const walletRouter = createTRPCRouter({
 
 			return updatedTransaction[0];
 		}),
+
+	// Update existing transactions with default category
+	updateTransactionsWithDefaultCategory: protectedProcedure.mutation(
+		async ({ ctx }) => {
+			const userId = ctx.session.user.id;
+
+			// Get default uncategorized category
+			const uncategorizedCategory = await ctx.db
+				.select()
+				.from(categories)
+				.where(
+					and(
+						eq(categories.userId, userId),
+						eq(categories.id, "uncategorized"),
+					),
+				)
+				.limit(1);
+
+			// If categories don't exist, create them automatically
+			if (!uncategorizedCategory[0]) {
+				// Import the default categories data
+				const { defaultCategories } = await import("~/data/categories");
+
+				// Find the uncategorized category from default data
+				const uncategorizedCategoryData = defaultCategories.find(
+					(cat) => cat.id === "uncategorized",
+				);
+
+				if (!uncategorizedCategoryData) {
+					throw new Error(
+						"Uncategorized category not found in default categories",
+					);
+				}
+
+				// Create the uncategorized category
+				const [newCategory] = await ctx.db
+					.insert(categories)
+					.values({
+						id: uncategorizedCategoryData.id,
+						name: uncategorizedCategoryData.name,
+						icon: uncategorizedCategoryData.icon,
+						color: uncategorizedCategoryData.color,
+						userId,
+						isDefault: true,
+					})
+					.returning();
+
+				if (!newCategory) {
+					throw new Error("Failed to create uncategorized category");
+				}
+
+				// Update all transactions that don't have a category assigned
+				await ctx.db
+					.update(transactions)
+					.set({
+						categoryId: newCategory.id,
+						subcategoryId: null, // Uncategorized has no subcategory
+					})
+					.where(
+						and(
+							eq(transactions.userId, userId),
+							or(
+								isNull(transactions.categoryId),
+								isNull(transactions.subcategoryId),
+							),
+						),
+					);
+
+				return {
+					success: true,
+					message: "Created default category and updated transactions",
+				};
+			}
+
+			// Update all transactions that don't have a category assigned
+			await ctx.db
+				.update(transactions)
+				.set({
+					categoryId: uncategorizedCategory[0].id,
+					subcategoryId: uncategorizedSubcategory[0].id,
+				})
+				.where(
+					and(
+						eq(transactions.userId, userId),
+						or(
+							isNull(transactions.categoryId),
+							isNull(transactions.subcategoryId),
+						),
+					),
+				);
+
+			return {
+				success: true,
+				message: "Updated transactions with default category",
+			};
+		},
+	),
 });

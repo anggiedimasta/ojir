@@ -143,8 +143,10 @@ function parseIndonesianRupiah(amountStr: string): number {
 		if (integerPart) {
 			// Remove periods (thousand separators) from integer part
 			const cleanInteger = integerPart.replace(/\./g, "");
-			// Combine as decimal number
-			result = Number.parseFloat(`${cleanInteger}.${decimalPart || "00"}`);
+			// Combine as decimal number and round to integer
+			result = Math.round(
+				Number.parseFloat(`${cleanInteger}.${decimalPart || "00"}`),
+			);
 		}
 	} else {
 		// No comma, just remove periods and treat as integer

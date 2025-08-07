@@ -1,4 +1,5 @@
 import { calendarRouter } from "~/server/api/routers/calendar";
+import { categoryRouter } from "~/server/api/routers/category";
 import { masterDataRouter } from "~/server/api/routers/master-data";
 import { walletRouter } from "~/server/api/routers/wallet";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -10,6 +11,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
 	calendar: calendarRouter,
+	category: categoryRouter,
 	wallet: walletRouter,
 	masterData: masterDataRouter,
 });

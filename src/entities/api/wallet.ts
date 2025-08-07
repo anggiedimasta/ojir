@@ -168,42 +168,51 @@ export interface DatabaseTransaction {
 
 // Transaction response from database
 export interface TransactionResponse {
-	id: string;
-	userId: string;
-	walletId: string; // Required wallet reference
-	transactionRefNo: string | null;
-	qrisRefNo: string | null;
-	merchantPan: string | null;
-	customerPan: string | null;
-	terminalId: string | null;
-	recipient: string | null;
-	location: string | null;
-	amount: string; // Decimal as string to avoid precision issues
-	fee: string; // Decimal as string to avoid precision issues
-	totalAmount: string; // Decimal as string to avoid precision issues
-	currency: string;
-	transactionDate: Date;
-	sourceOfFund: string | null;
-	sourceAccount: string | null;
-	recipientBank: string | null;
-	recipientBankAccount: string | null;
-	transferPurpose: string | null;
-	acquirer: string | null;
-	bankSender: string | null;
-	emailSubject: string | null;
-	transactionType: string | null;
-	direction: string; // From database schema as text
-	status: string | null;
-	createdAt: Date;
-	updatedAt: Date | null;
-	virtualAccountNo: string | null;
-	// Wallet information
-	walletName: string | null;
-	walletType: string | null;
-	walletBankCode: string | null;
-	walletBankName: string | null;
-	walletColor: string | null;
-}
+		id: string;
+		userId: string;
+		walletId: string; // Required wallet reference
+		transactionRefNo: string | null;
+		qrisRefNo: string | null;
+		merchantPan: string | null;
+		customerPan: string | null;
+		terminalId: string | null;
+		recipient: string | null;
+		location: string | null;
+		amount: string; // Decimal as string to avoid precision issues
+		fee: string; // Decimal as string to avoid precision issues
+		totalAmount: string; // Decimal as string to avoid precision issues
+		currency: string;
+		transactionDate: Date;
+		sourceOfFund: string | null;
+		sourceAccount: string | null;
+		recipientBank: string | null;
+		recipientBankAccount: string | null;
+		transferPurpose: string | null;
+		acquirer: string | null;
+		bankSender: string | null;
+		emailSubject: string | null;
+		transactionType: string | null;
+		direction: string; // From database schema as text
+		status: string | null;
+		createdAt: Date;
+		updatedAt: Date | null;
+		virtualAccountNo: string | null;
+		// Category information
+		categoryId: string | null;
+		subcategoryId: string | null;
+		categoryName: string | null;
+		categoryIcon: string | null;
+		categoryColor: string | null;
+		subcategoryName: string | null;
+		subcategoryIcon: string | null;
+		subcategoryColor: string | null;
+		// Wallet information
+		walletName: string | null;
+		walletType: string | null;
+		walletBankCode: string | null;
+		walletBankName: string | null;
+		walletColor: string | null;
+	}
 
 // Gmail API email structure
 export interface GmailMessage {

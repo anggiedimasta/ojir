@@ -30,17 +30,21 @@ export function DateInput({
 				</label>
 			)}
 			<div className="relative">
-				<div className="-translate-y-1/2 absolute top-1/2 left-3 flex h-4 w-4 items-center justify-center text-slate-400">
-					<Icon icon={Calendar} size="sm" />
-				</div>
 				<Input
 					id={inputId}
 					type="date"
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
-					className="pl-10"
+					className="h-10 pr-8 text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden"
 					placeholder={placeholder}
 				/>
+				<button
+					type="button"
+					onClick={() => document.getElementById(inputId)?.showPicker?.()}
+					className="-translate-y-1/2 absolute top-1/2 right-2 flex h-3 w-3 cursor-pointer items-center justify-center text-slate-400 transition-colors hover:text-slate-600"
+				>
+					<Icon icon={Calendar} size="xs" />
+				</button>
 			</div>
 		</div>
 	);

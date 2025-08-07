@@ -181,6 +181,12 @@ export const transactions = createTable(
 		status: varchar("status", { length: 50 }),
 		direction: text("direction").notNull().default("out"),
 		virtualAccountNo: varchar("virtual_account_no", { length: 255 }),
+		categoryId: varchar("category_id", { length: 255 }).references(
+			() => categories.id,
+		),
+		subcategoryId: varchar("subcategory_id", { length: 255 }).references(
+			() => subcategories.id,
+		),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.default(sql`CURRENT_TIMESTAMP`)
 			.notNull(),
@@ -366,6 +372,14 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 		fields: [transactions.walletId],
 		references: [wallets.id],
 	}),
+	category: one(categories, {
+		fields: [transactions.categoryId],
+		references: [categories.id],
+	}),
+	subcategory: one(subcategories, {
+		fields: [transactions.subcategoryId],
+		references: [subcategories.id],
+	}),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -391,5 +405,89 @@ export const userGmailTokensRelations = relations(
 			fields: [userGmailTokens.userId],
 			references: [authUsers.id],
 		}),
+	}),
+);
+
+// Category tables
+export const categories = createTable(
+	"category",
+	{
+		id: varchar("id", { length: 255 })
+			.notNull()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		name: varchar("name", { length: 255 }).notNull(),
+		icon: varchar("icon", { length: 50 }),
+		color: varchar("color", { length: 7 }).notNull(), // hex color
+		userId: varchar("user_id", { length: 255 })
+			.notNull()
+			.references(() => authUsers.id, { onDelete: "cascade" }),
+		isDefault: boolean("is_default").default(false).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(category) => ({
+		userIdIdx: index("category_user_id_idx").on(category.userId),
+	}),
+);
+
+export const subcategories = createTable(
+	"subcategory",
+	{
+		id: varchar("id", { length: 255 })
+			.notNull()
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
+		name: varchar("name", { length: 255 }).notNull(),
+		icon: varchar("icon", { length: 50 }),
+		color: varchar("color", { length: 7 }).notNull(), // hex color
+		categoryId: varchar("category_id", { length: 255 })
+			.notNull()
+			.references(() => categories.id, { onDelete: "cascade" }),
+		userId: varchar("user_id", { length: 255 })
+			.notNull()
+			.references(() => authUsers.id, { onDelete: "cascade" }),
+		isDefault: boolean("is_default").default(false).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.default(sql`CURRENT_TIMESTAMP`)
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+			() => new Date(),
+		),
+	},
+	(subcategory) => ({
+		categoryIdIdx: index("subcategory_category_id_idx").on(
+			subcategory.categoryId,
+		),
+		userIdIdx: index("subcategory_user_id_idx").on(subcategory.userId),
+	}),
+);
+
+// Category relations
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
+	user: one(authUsers, {
+		fields: [categories.userId],
+		references: [authUsers.id],
+	}),
+	subcategories: many(subcategories),
+	transactions: many(transactions),
+}));
+
+export const subcategoriesRelations = relations(
+	subcategories,
+	({ one, many }) => ({
+		user: one(authUsers, {
+			fields: [subcategories.userId],
+			references: [authUsers.id],
+		}),
+		category: one(categories, {
+			fields: [subcategories.categoryId],
+			references: [categories.id],
+		}),
+		transactions: many(transactions),
 	}),
 );
