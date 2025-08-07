@@ -94,7 +94,10 @@ export function WalletList({
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Add wallet"
 								>
+									<title>Add wallet</title>
 									<path
 										strokeLinecap="round"
 										strokeLinejoin="round"
@@ -162,6 +165,12 @@ function WalletCard({
 		<div
 			className="group relative cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl"
 			onClick={onSelect}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					onSelect();
+				}
+			}}
 		>
 			{/* Credit Card Style Container */}
 			<div

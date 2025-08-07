@@ -120,6 +120,7 @@ export function Navbar() {
 								onMouseLeave={() => setActiveMenu(null)}
 							>
 								<button
+									type="button"
 									className={`flex items-center gap-1 font-medium text-slate-600 text-sm transition-colors hover:text-slate-900 ${
 										activeMenu === item.title ? "text-slate-900" : ""
 									}`}

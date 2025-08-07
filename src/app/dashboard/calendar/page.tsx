@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CalendarView } from "~/app/dashboard/calendar/_components/types";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -27,7 +27,7 @@ export default function CalendarPage() {
 			: (pathParts[3] as CalendarView);
 	const dateFromUrl = pathParts[4];
 
-	const parseDateFromUrl = (dateStr: string) => {
+	const parseDateFromUrl = useCallback((dateStr: string) => {
 		const parts = dateStr.split("-").map(Number);
 		if (parts.length === 3 && parts.every((part) => !Number.isNaN(part))) {
 			// We know these are numbers because of the every() check above
@@ -37,7 +37,7 @@ export default function CalendarPage() {
 			return new Date(year, month - 1, day);
 		}
 		return new Date();
-	};
+	}, []);
 
 	// Initialize currentDate from URL or use today's date
 	const [currentDate, setCurrentDate] = useState(() => {
@@ -61,7 +61,7 @@ export default function CalendarPage() {
 				setCurrentDate(newDate);
 			}
 		}
-	}, [dateFromUrl]);
+	}, [dateFromUrl, parseDateFromUrl]);
 
 	// Calculate date range based on current view
 	const getDateRange = () => {

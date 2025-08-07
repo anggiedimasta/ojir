@@ -9,7 +9,19 @@ import type {
 	CreateWalletInput,
 	UpdateWalletInput,
 	Wallet,
+	WalletType,
 } from "~/entities/api/wallet";
+
+export type WalletFormData = {
+	name: string;
+	type: string;
+	bankCode: string;
+	accountNumber: string;
+	balance: number;
+	currency: string;
+	isDefault: boolean;
+	color: string;
+};
 
 interface WalletFormProps {
 	wallet?: Wallet;
@@ -20,7 +32,7 @@ interface WalletFormProps {
 	onRenderFooter?: (props: {
 		handleSubmit: (e: React.FormEvent) => void;
 		isLoading: boolean;
-		formData: any;
+		formData: WalletFormData;
 	}) => React.ReactNode;
 }
 
@@ -78,7 +90,10 @@ export function WalletForm({
 			<form onSubmit={handleSubmit} className="space-y-6" id="wallet-form">
 				{/* Wallet Name */}
 				<div>
-					<label className="mb-2 block font-medium text-gray-700 text-sm">
+					<label
+						htmlFor="name"
+						className="mb-2 block font-medium text-gray-700 text-sm"
+					>
 						Wallet Name *
 					</label>
 					<input
@@ -93,7 +108,10 @@ export function WalletForm({
 
 				{/* Bank Selection */}
 				<div>
-					<label className="mb-2 block font-medium text-gray-700 text-sm">
+					<label
+						htmlFor="bankCode"
+						className="mb-2 block font-medium text-gray-700 text-sm"
+					>
 						Bank *
 					</label>
 					<select
@@ -121,7 +139,10 @@ export function WalletForm({
 
 				{/* Account Number */}
 				<div>
-					<label className="mb-2 block font-medium text-gray-700 text-sm">
+					<label
+						htmlFor="accountNumber"
+						className="mb-2 block font-medium text-gray-700 text-sm"
+					>
 						Last 4 Digits of Account Number
 					</label>
 					<input
@@ -142,13 +163,16 @@ export function WalletForm({
 
 				{/* Wallet Type */}
 				<div>
-					<label className="mb-2 block font-medium text-gray-700 text-sm">
+					<label
+						htmlFor="type"
+						className="mb-2 block font-medium text-gray-700 text-sm"
+					>
 						Account Type *
 					</label>
 					<select
 						value={formData.type}
 						onChange={(e) =>
-							setFormData({ ...formData, type: e.target.value as any })
+							setFormData({ ...formData, type: e.target.value as WalletType })
 						}
 						className="w-full cursor-pointer rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 transition-colors duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
 						required
@@ -167,7 +191,10 @@ export function WalletForm({
 
 				{/* Initial Balance */}
 				<div>
-					<label className="mb-2 block font-medium text-gray-700 text-sm">
+					<label
+						htmlFor="balance"
+						className="mb-2 block font-medium text-gray-700 text-sm"
+					>
 						Initial Balance
 					</label>
 					<input

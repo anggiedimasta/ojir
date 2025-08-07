@@ -140,13 +140,19 @@ export default async function Home() {
 													{/* Navigation Actions */}
 													<div className="mb-4 flex items-center justify-between">
 														<div className="flex items-center gap-2">
-															<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+															<button
+																type="button"
+																className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+															>
 																<svg
 																	className="h-5 w-5"
 																	viewBox="0 0 24 24"
 																	fill="none"
 																	stroke="currentColor"
+																	role="img"
+																	aria-label="Previous"
 																>
+																	<title>Previous</title>
 																	<path
 																		strokeLinecap="round"
 																		strokeLinejoin="round"
@@ -157,13 +163,19 @@ export default async function Home() {
 															</button>
 														</div>
 														<div className="flex items-center gap-2">
-															<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+															<button
+																type="button"
+																className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+															>
 																<svg
 																	className="h-5 w-5"
 																	viewBox="0 0 24 24"
 																	fill="none"
 																	stroke="currentColor"
+																	role="img"
+																	aria-label="Sort"
 																>
+																	<title>Sort</title>
 																	<path
 																		strokeLinecap="round"
 																		strokeLinejoin="round"
@@ -172,13 +184,19 @@ export default async function Home() {
 																	/>
 																</svg>
 															</button>
-															<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+															<button
+																type="button"
+																className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+															>
 																<svg
 																	className="h-5 w-5"
 																	viewBox="0 0 24 24"
 																	fill="none"
 																	stroke="currentColor"
+																	role="img"
+																	aria-label="Search"
 																>
+																	<title>Search</title>
 																	<path
 																		strokeLinecap="round"
 																		strokeLinejoin="round"
@@ -187,13 +205,19 @@ export default async function Home() {
 																	/>
 																</svg>
 															</button>
-															<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+															<button
+																type="button"
+																className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+															>
 																<svg
 																	className="h-5 w-5"
 																	viewBox="0 0 24 24"
 																	fill="none"
 																	stroke="currentColor"
+																	role="img"
+																	aria-label="Share"
 																>
+																	<title>Share</title>
 																	<path
 																		strokeLinecap="round"
 																		strokeLinejoin="round"
@@ -207,13 +231,19 @@ export default async function Home() {
 
 													{/* Selected Day View */}
 													<div className="mb-4 flex items-center justify-center">
-														<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+														<button
+															type="button"
+															className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+														>
 															<svg
 																className="h-5 w-5"
 																viewBox="0 0 24 24"
 																fill="none"
 																stroke="currentColor"
+																role="img"
+																aria-label="Previous day"
 															>
+																<title>Previous day</title>
 																<path
 																	strokeLinecap="round"
 																	strokeLinejoin="round"
@@ -225,13 +255,19 @@ export default async function Home() {
 														<div className="mx-4 font-bold text-4xl text-slate-900">
 															15
 														</div>
-														<button className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600">
+														<button
+															type="button"
+															className="rounded-lg bg-slate-100/50 p-1.5 text-slate-600"
+														>
 															<svg
 																className="h-5 w-5"
 																viewBox="0 0 24 24"
 																fill="none"
 																stroke="currentColor"
+																role="img"
+																aria-label="Next day"
 															>
+																<title>Next day</title>
 																<path
 																	strokeLinecap="round"
 																	strokeLinejoin="round"
@@ -254,7 +290,7 @@ export default async function Home() {
 													<div className="space-y-4">
 														{events.map((event, i) => (
 															<div
-																key={i}
+																key={`event-${event.title}-${i}`}
 																className="rounded-lg bg-slate-50/30 p-3 backdrop-blur-xl"
 																style={{
 																	background:
@@ -389,7 +425,7 @@ export default async function Home() {
 															},
 														].map((stat, i) => (
 															<div
-																key={i}
+																key={`stat-${stat.label}-${i}`}
 																className="rounded-xl bg-slate-50/50 p-4 backdrop-blur-xl"
 																style={{
 																	background:
@@ -437,7 +473,7 @@ export default async function Home() {
 																<tbody className="text-sm">
 																	{events.map((expense, i) => (
 																		<tr
-																			key={i}
+																			key={`expense-${expense.title}-${i}`}
 																			className="border-slate-100 border-b last:border-0"
 																		>
 																			<td className="py-3 text-slate-600">

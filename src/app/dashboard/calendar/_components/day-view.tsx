@@ -28,6 +28,16 @@ export function DayView({ currentDate, events, onCreateEvent }: DayViewProps) {
 		router.push(`/dashboard/calendar/event/${event.id}`);
 	};
 
+	const handleKeyDown = (
+		event: React.KeyboardEvent,
+		calendarEvent: CalendarEvent,
+	) => {
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			handleEventClick(calendarEvent);
+		}
+	};
+
 	return (
 		<div className="space-y-6">
 			{/* Day Header */}
@@ -48,7 +58,9 @@ export function DayView({ currentDate, events, onCreateEvent }: DayViewProps) {
 					<div
 						key={event.id}
 						onClick={() => handleEventClick(event)}
-						className="group cursor-pointer rounded-lg border border-slate-200 bg-white/80 p-4 transition-all hover:bg-white hover:shadow-md"
+						onKeyDown={(e) => handleKeyDown(e, event)}
+						aria-label={`View event: ${event.title}`}
+						className="group cursor-pointer rounded-lg border border-slate-200 bg-white/80 p-4 transition-all hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 					>
 						<div className="flex items-start justify-between">
 							<div className="flex-1">

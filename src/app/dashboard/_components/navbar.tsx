@@ -16,6 +16,7 @@ export function Navbar({ user }: NavbarProps) {
 		<div className="fixed top-0 right-0 left-0 z-50 flex h-20 items-center justify-between border-slate-200 border-b bg-white/80 px-4 backdrop-blur-sm">
 			<div className="flex items-center">
 				<button
+					type="button"
 					onClick={() => setCollapsed(!isCollapsed)}
 					className="relative z-[102] flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-rose-600 bg-rose-500 text-white shadow-sm transition-all duration-300 hover:bg-rose-600"
 				>

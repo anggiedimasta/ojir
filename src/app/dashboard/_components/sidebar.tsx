@@ -62,6 +62,7 @@ export function Sidebar() {
 		<>
 			{/* Toggle Button */}
 			<button
+				type="button"
 				onClick={() => setCollapsed(!isCollapsed)}
 				className={`-mr-4 fixed top-6 z-[102] flex h-8 w-8 transform-gpu cursor-pointer items-center justify-center rounded-full border border-rose-600 bg-rose-500 text-white shadow-sm transition-all duration-200 ease-out hover:bg-rose-600 ${!isCollapsed ? "left-[272px]" : "left-[62px]"}`}
 			>

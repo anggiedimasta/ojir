@@ -749,9 +749,9 @@ function parseBankMandiriMerchantEmail(
 		) {
 			// Extract just the part before the email footer
 			const cleanMatch = finalSourceOfFund.match(
-				/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i,
+				/^(.*?Credit Card.*?Mandiri.*?Platinum.*?)\s*\*{4}/is,
 			);
-			if (cleanMatch?.[1]) {
+			if (cleanMatch && typeof cleanMatch[1] === "string") {
 				finalSourceOfFund = cleanMatch[1].trim();
 			} else {
 				// Fallback: just take everything before "Save this email"
@@ -766,7 +766,7 @@ function parseBankMandiriMerchantEmail(
 		if (finalSourceOfFund && finalSourceOfFund.length > 255) {
 			// Try to extract just the essential part
 			const essentialMatch = finalSourceOfFund.match(
-				/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i,
+				/^(.*?Credit Card.*?Mandiri.*?Platinum.*?)/i,
 			);
 			if (essentialMatch?.[1]) {
 				finalSourceOfFund = essentialMatch[1].trim();
@@ -1322,7 +1322,7 @@ function parseMerchantPaymentFromText(
 
 		// Extract location - look for location after recipient name
 		const locationMatch = emailBody.match(
-			/Recipient[^]*?([^]*?)\s*(?:Date|Time|Transaction|$)/i,
+			/Recipient[\s\S]*?([A-Z\s]+(?:\s*-\s*[A-Z]+)?)\s*(?:Date|Time|Transaction|$)/i,
 		);
 		let location = "";
 		if (locationMatch?.[1]) {
@@ -1411,9 +1411,9 @@ function parseMerchantPaymentFromText(
 		}
 
 		if (!sourceMatch) {
-			// Try to find the exact pattern from the problematic email
+			// Try to find the exact pattern from the problematic email, but avoid using [^]* (negated empty character class)
 			const sourceOfFundMatch = emailBody.match(
-				/Source of Fund\s*([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i,
+				/Source of Fund\s*((?:.|\n)*?Credit Card(?:.|\n)*?Mandiri(?:.|\n)*?Platinum(?:.|\n)*?)\s*\*\*\*\*/i,
 			);
 			if (sourceOfFundMatch) {
 				sourceMatch = [
@@ -1427,7 +1427,7 @@ function parseMerchantPaymentFromText(
 		if (!sourceMatch) {
 			// Try a very specific pattern that stops at the right boundary
 			const sourceOfFundMatch = emailBody.match(
-				/Source of Fund\s*([^]*?)\s*\*\*\*\*\s*(?:Save this email|Thank you|PT Bank|$)/i,
+				/Source of Fund\s*((?:.|\n)*?)\s*\*\*\*\*\s*(?:Save this email|Thank you|PT Bank|$)/i,
 			);
 			if (sourceOfFundMatch) {
 				sourceMatch = [

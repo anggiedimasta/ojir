@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 			state, // user ID from state
 			tokens.access_token,
 			tokens.refresh_token,
-			(tokens as any).expires_in || 3600,
+			(tokens as { expires_in?: number }).expires_in || 3600,
 		);
 
 		// Setup Gmail watch

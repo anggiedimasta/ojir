@@ -59,7 +59,10 @@ export function ColorPicker({
 }: ColorPickerProps) {
 	return (
 		<div className={`space-y-3 ${className}`}>
-			<label className="block font-medium text-gray-700 text-sm">
+			<label
+				htmlFor="walletColor"
+				className="block font-medium text-gray-700 text-sm"
+			>
 				Wallet Color
 			</label>
 			<div className="grid grid-cols-6 gap-2">

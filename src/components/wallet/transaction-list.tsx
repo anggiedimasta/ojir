@@ -1,10 +1,8 @@
-import { Download, RefreshCw, Wallet } from "lucide-react";
-import { Button } from "~/components/ui/button";
+import { Wallet } from "lucide-react";
 import { Card } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { PaginationControls } from "~/components/ui/pagination-controls";
 import { TransactionItem } from "~/components/ui/transaction-item";
-import { TransactionListSkeleton } from "~/components/ui/transaction-skeleton";
 import type { TransactionListProps } from "~/entities/api/wallet";
 
 export function TransactionList({

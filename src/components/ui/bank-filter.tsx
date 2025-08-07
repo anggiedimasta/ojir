@@ -40,7 +40,8 @@ export function BankFilter({
 	bankOptionsMap.set("all", { value: "all", label: "All Banks", icon: null });
 
 	// Process banks and deduplicate by filter type
-	banks?.forEach((bank) => {
+	if (!banks) return;
+	for (const bank of banks) {
 		const filterType = mapBankCodeToFilterType(bank.code);
 		const existing = bankOptionsMap.get(filterType);
 
@@ -61,7 +62,7 @@ export function BankFilter({
 				icon: bank.name,
 			});
 		}
-	});
+	}
 
 	const bankOptions = Array.from(bankOptionsMap.values());
 
@@ -160,6 +161,7 @@ export function BankFilter({
 						const isSelected = value.includes(option.value);
 						return (
 							<button
+								type="button"
 								key={option.value}
 								className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 ${
 									isSelected ? "bg-blue-50 text-blue-600" : "text-slate-700"
@@ -174,7 +176,10 @@ export function BankFilter({
 											className="mx-auto mt-0.5 h-2 w-2 text-white"
 											fill="currentColor"
 											viewBox="0 0 20 20"
+											role="img"
+											aria-label="Selected"
 										>
+											<title>Selected</title>
 											<path
 												fillRule="evenodd"
 												d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -197,7 +202,31 @@ export function BankFilter({
 
 			{/* Backdrop to close dropdown when clicking outside */}
 			{isOpen && (
-				<div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+				<div
+					className="fixed inset-0 z-40"
+					onClick={() => setIsOpen(false)}
+					role="button"
+					tabIndex={0}
+					aria-label="Close dropdown"
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							setIsOpen(false);
+						}
+					}}
+					onKeyUp={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							setIsOpen(false);
+						}
+					}}
+					onKeyPress={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							setIsOpen(false);
+						}
+					}}
+				/>
 			)}
 		</div>
 	);

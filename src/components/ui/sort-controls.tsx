@@ -45,6 +45,7 @@ export function SortControls({
 					<div className="absolute top-full left-0 z-50 mt-1 w-max min-w-[200px] rounded-md border border-slate-200 bg-white shadow-lg">
 						{options.map((option) => (
 							<button
+								type="button"
 								key={option.value}
 								className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 ${
 									option.value === sortBy
@@ -65,6 +66,15 @@ export function SortControls({
 					<div
 						className="fixed inset-0 z-40"
 						onClick={() => setIsOpen(false)}
+						role="button"
+						tabIndex={0}
+						aria-label="Close dropdown"
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								setIsOpen(false);
+							}
+						}}
 					/>
 				)}
 			</div>

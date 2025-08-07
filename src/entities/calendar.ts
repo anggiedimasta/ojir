@@ -23,7 +23,7 @@ export interface CalendarEvent {
 	attachments: Attachment[];
 	meetingUrl?: string;
 	meetingPassword?: string;
-	customFields: Record<string, any>;
+	customFields: Record<string, unknown>;
 	isGoogleEvent?: boolean;
 	googleEventId?: string;
 	createdAt: Date;

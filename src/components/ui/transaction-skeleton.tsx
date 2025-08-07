@@ -42,6 +42,7 @@ export function TransactionListSkeleton({ count = 5 }: { count?: number }) {
 	return (
 		<div className="divide-y divide-slate-100">
 			{Array.from({ length: count }).map((_, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
 				<TransactionSkeleton key={index} />
 			))}
 		</div>

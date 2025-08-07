@@ -21,6 +21,12 @@ const getEventsForDay = (date: Date, events: CalendarEvent[]) => {
 };
 
 export function WeekView({ currentDate, events, onDayClick }: WeekViewProps) {
+	const handleKeyDown = (event: React.KeyboardEvent, date: Date) => {
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			onDayClick(date);
+		}
+	};
 	const getWeekDays = (date: Date) => {
 		const startOfWeek = new Date(date);
 		const day = startOfWeek.getDay();
@@ -58,8 +64,10 @@ export function WeekView({ currentDate, events, onDayClick }: WeekViewProps) {
 					return (
 						<div
 							key={day.toISOString()}
-							className="min-h-[200px] cursor-pointer border-slate-200 border-r border-b p-4hover:bg-slate-50 transition-colors"
+							className="min-h-[200px] cursor-pointer border-slate-200 border-r border-b p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
 							onClick={() => onDayClick(day)}
+							onKeyDown={(e) => handleKeyDown(e, day)}
+							aria-label={`View events for ${day.toLocaleDateString()}`}
 						>
 							<div className="space-y-1.5">
 								{dayEvents.map((event) => (

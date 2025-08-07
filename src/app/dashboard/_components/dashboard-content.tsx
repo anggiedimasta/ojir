@@ -337,6 +337,7 @@ export function DashboardContent({ user }: DashboardContentProps) {
 							<div className="mt-4 grid grid-cols-2 gap-4">
 								{quickActions.map((action) => (
 									<button
+										type="button"
 										key={action.name}
 										className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-3 font-medium text-slate-900 text-sm hover:bg-slate-50"
 									>

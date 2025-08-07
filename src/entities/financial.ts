@@ -129,7 +129,7 @@ export interface Product {
 	dimensions?: ProductDimensions;
 	images: string[];
 	tags: string[];
-	customFields: Record<string, any>;
+	customFields: Record<string, unknown>;
 	createdAt: Date;
 	updatedAt: Date;
 }

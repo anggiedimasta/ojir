@@ -31,6 +31,12 @@ export function MonthView({
 	daysInMonth,
 	onDayClick,
 }: MonthViewProps) {
+	const handleKeyDown = (event: React.KeyboardEvent, date: Date) => {
+		if (event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			onDayClick(date);
+		}
+	};
 	return (
 		<div className="rounded-xl border border-slate-200 bg-white/80 shadow-sm">
 			<div className="grid grid-cols-7 border-slate-200 border-b">
@@ -46,7 +52,7 @@ export function MonthView({
 			<div className="grid grid-cols-7">
 				{Array.from({ length: firstDayOfMonth }).map((_, index) => (
 					<div
-						key={`empty-${index}`}
+						key={`empty-day-${currentDate.getFullYear()}-${currentDate.getMonth()}-${index}`}
 						className="min-h-[120px] border-slate-200 border-r border-b p-4 text-center "
 					/>
 				))}
@@ -61,8 +67,10 @@ export function MonthView({
 					return (
 						<div
 							key={dayNum}
-							className="min-h-[120px] cursor-pointer border-slate-200 border-r border-b p-4 transition-colors hover:bg-slate-50"
+							className="min-h-[120px] cursor-pointer border-slate-200 border-r border-b p-4 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
 							onClick={() => onDayClick(date)}
+							onKeyDown={(e) => handleKeyDown(e, date)}
+							aria-label={`View events for ${date.toLocaleDateString()}`}
 						>
 							<div className="mb-2 font-semibold text-slate-900">{dayNum}</div>
 							<div className="space-y-1.5">

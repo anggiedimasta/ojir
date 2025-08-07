@@ -20,10 +20,11 @@ export function DateInput({
 	className,
 	required = false,
 }: DateInputProps) {
+	const inputId = `date-input-${Math.random().toString(36).substr(2, 9)}`;
 	return (
 		<div className={cn("flex flex-col gap-2", className)}>
 			{label && (
-				<label className="font-medium text-slate-700 text-sm">
+				<label htmlFor={inputId} className="font-medium text-slate-700 text-sm">
 					{label}
 					{required && <span className="ml-1 text-red-500">*</span>}
 				</label>
@@ -35,6 +36,7 @@ export function DateInput({
 					className="-translate-y-1/2 absolute top-1/2 left-3 transform text-slate-400"
 				/>
 				<Input
+					id={inputId}
 					type="date"
 					value={value}
 					onChange={(e) => onChange(e.target.value)}

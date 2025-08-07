@@ -383,7 +383,10 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 													line.includes("PIN:"),
 											)
 											.map((line, index) => (
-												<div key={index} className="text-sm">
+												<div
+													key={`meeting-line-${index}-${line.substring(0, 10)}`}
+													className="text-sm"
+												>
 													{line.includes("http") ? (
 														<a
 															href={line.trim()}
@@ -434,7 +437,10 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 									<div className="space-y-2">
 										{event.attendees.map(
 											(attendee: GoogleCalendarAttendee, index: number) => (
-												<div key={index} className="flex items-center gap-2">
+												<div
+													key={`attendee-${attendee.email}-${index}`}
+													className="flex items-center gap-2"
+												>
 													<div
 														className={`h-2 w-2 rounded-full ${
 															attendee.responseStatus === "accepted"
@@ -632,7 +638,10 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 										<div className="space-y-2">
 											{event.reminders.overrides?.map(
 												(reminder, index: number) => (
-													<div key={index} className="flex items-center gap-2">
+													<div
+														key={`reminder-${reminder.method}-${reminder.minutes}-${index}`}
+														className="flex items-center gap-2"
+													>
 														<div
 															className={`h-2 w-2 rounded-full ${
 																reminder.method === "popup"

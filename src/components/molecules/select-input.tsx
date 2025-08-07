@@ -26,16 +26,21 @@ export function SelectInput({
 	className,
 	required = false,
 }: SelectInputProps) {
+	const selectId = `select-input-${Math.random().toString(36).substr(2, 9)}`;
 	return (
 		<div className={cn("flex flex-col gap-2", className)}>
 			{label && (
-				<label className="font-medium text-slate-700 text-sm">
+				<label
+					htmlFor={selectId}
+					className="font-medium text-slate-700 text-sm"
+				>
 					{label}
 					{required && <span className="ml-1 text-red-500">*</span>}
 				</label>
 			)}
 			<div className="relative">
 				<select
+					id={selectId}
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					className="h-10 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-gray-900 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -92,7 +92,7 @@ export interface FileUpload {
 	mimeType: string;
 	uploadedBy: string;
 	uploadedAt: Date;
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 // Notification types
@@ -102,7 +102,7 @@ export interface Notification {
 	type: NotificationType;
 	title: string;
 	message: string;
-	data?: Record<string, any>;
+	data?: Record<string, unknown>;
 	isRead: boolean;
 	readAt?: Date;
 	createdAt: Date;

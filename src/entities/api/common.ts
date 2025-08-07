@@ -4,7 +4,7 @@ export interface ApiResponse<T> {
 	success: boolean;
 	data?: T;
 	error?: ApiError;
-	meta?: Record<string, any>;
+	meta?: Record<string, unknown>;
 }
 
 export interface ApiError {

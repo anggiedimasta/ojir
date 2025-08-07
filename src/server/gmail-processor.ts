@@ -1,46 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { google } from "googleapis";
-// import { publishers } from "~/lib/pubsub-client";
+import type {
+	GmailMessage,
+	ParsedTransaction,
+	TransactionResponse,
+} from "~/entities/api/wallet";
 import { parseTransactionEmail } from "./api/gmail";
 import { db } from "./db";
 import { transactions, wallets } from "./db/schema";
 import { getUserAccessToken } from "./gmail-setup";
-
-interface GmailNotification {
-	emailAddress: string;
-	historyId: string;
-	messageId?: string;
-	threadId?: string;
-}
-
-// Process Gmail webhook notification with user context
-export async function processGmailWebhook(notification: GmailNotification) {
-	console.log("📧 Processing Gmail webhook:", notification);
-
-	try {
-		const { emailAddress, historyId } = notification;
-
-		// Get user by email address
-		const user = await getUserByEmail(emailAddress);
-		if (!user) {
-			console.log(`❌ User not found for email: ${emailAddress}`);
-			return;
-		}
-
-		// Get user's access token
-		const accessToken = await getUserAccessToken(user.userId);
-		if (!accessToken) {
-			console.log(`❌ No valid access token for user: ${user.userId}`);
-			return;
-		}
-
-		// Process user's emails
-		await processUserEmails(user.userId, accessToken, historyId);
-	} catch (error) {
-		console.error("❌ Error processing Gmail webhook:", error);
-		throw error;
-	}
-}
 
 // Process emails for a specific user
 async function processUserEmails(
@@ -146,7 +114,9 @@ async function processSingleEmail(
 		console.log("✅ Bank email detected! Processing transaction...");
 
 		// Parse the email for transaction data
-		const parsedTransaction = parseTransactionEmail(messageData as any);
+		const parsedTransaction = parseTransactionEmail(
+			messageData as GmailMessage,
+		);
 
 		if (!parsedTransaction) {
 			console.log("❌ Could not parse transaction from email");
@@ -170,7 +140,7 @@ async function processSingleEmail(
 // Save transaction to database with proper wallet mapping
 async function saveTransaction(
 	userId: string,
-	parsedTransaction: any,
+	parsedTransaction: ParsedTransaction,
 	messageId: string,
 ) {
 	try {

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useToast } from "~/components/ui/use-toast";
-import type { WalletWithBank } from "~/entities/api/wallet";
+import type {
+	CreateWalletInput,
+	UpdateWalletInput,
+	WalletWithBank,
+} from "~/entities/api/wallet";
 import { api } from "~/trpc/react";
 
 export function useWalletManagement() {
@@ -93,11 +97,13 @@ export function useWalletManagement() {
 		}
 	};
 
-	const handleWalletSubmit = async (data: any) => {
+	const handleWalletSubmit = async (
+		data: CreateWalletInput | UpdateWalletInput,
+	) => {
 		if (editingWallet) {
-			await updateWalletMutation.mutateAsync(data);
+			await updateWalletMutation.mutateAsync(data as UpdateWalletInput);
 		} else {
-			await createWalletMutation.mutateAsync(data);
+			await createWalletMutation.mutateAsync(data as CreateWalletInput);
 		}
 	};
 

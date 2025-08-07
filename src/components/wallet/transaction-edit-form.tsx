@@ -198,6 +198,8 @@ export function TransactionEditForm({
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Income"
 								>
 									<path
 										strokeLinecap="round"
@@ -234,6 +236,8 @@ export function TransactionEditForm({
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Expense"
 								>
 									<path
 										strokeLinecap="round"
@@ -258,6 +262,8 @@ export function TransactionEditForm({
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Expense"
 								>
 									<path
 										strokeLinecap="round"
@@ -291,6 +297,8 @@ export function TransactionEditForm({
 										className="h-4 w-4"
 										fill="currentColor"
 										viewBox="0 0 20 20"
+										role="img"
+										aria-label="Error"
 									>
 										<path
 											fillRule="evenodd"
@@ -329,6 +337,8 @@ export function TransactionEditForm({
 											className="h-4 w-4"
 											fill="currentColor"
 											viewBox="0 0 20 20"
+											role="img"
+											aria-label="Error"
 										>
 											<path
 												fillRule="evenodd"
@@ -387,6 +397,8 @@ export function TransactionEditForm({
 											className="h-4 w-4"
 											fill="currentColor"
 											viewBox="0 0 20 20"
+											role="img"
+											aria-label="Error"
 										>
 											<path
 												fillRule="evenodd"
@@ -423,6 +435,8 @@ export function TransactionEditForm({
 											className="h-4 w-4"
 											fill="currentColor"
 											viewBox="0 0 20 20"
+											role="img"
+											aria-label="Error"
 										>
 											<path
 												fillRule="evenodd"
@@ -447,6 +461,8 @@ export function TransactionEditForm({
 								fill="none"
 								stroke="currentColor"
 								viewBox="0 0 24 24"
+								role="img"
+								aria-label="Additional Details"
 							>
 								<path
 									strokeLinecap="round"
@@ -584,6 +600,8 @@ export function TransactionEditForm({
 										className="h-4 w-4 animate-spin"
 										fill="none"
 										viewBox="0 0 24 24"
+										role="img"
+										aria-label="Loading"
 									>
 										<circle
 											className="opacity-25"
@@ -608,6 +626,8 @@ export function TransactionEditForm({
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
+										role="img"
+										aria-label="Update transaction"
 									>
 										<path
 											strokeLinecap="round"

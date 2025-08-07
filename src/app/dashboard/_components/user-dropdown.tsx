@@ -32,6 +32,7 @@ export function UserDropdown({ name, email, image }: UserDropdownProps) {
 	return (
 		<div className="relative" ref={dropdownRef}>
 			<button
+				type="button"
 				onClick={() => setIsOpen(!isOpen)}
 				className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
 			>
@@ -63,6 +64,7 @@ export function UserDropdown({ name, email, image }: UserDropdownProps) {
 						</div>
 						<div className="h-px bg-slate-200" />
 						<button
+							type="button"
 							onClick={() => signOut({ callbackUrl: "/" })}
 							className="mt-2 flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-slate-600 text-sm transition-colors hover:bg-slate-50 hover:text-slate-900"
 						>

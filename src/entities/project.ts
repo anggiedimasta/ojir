@@ -15,7 +15,7 @@ export interface Project {
 	budget?: ProjectBudget;
 	timeline: ProjectTimeline;
 	tags: string[];
-	customFields: Record<string, any>;
+	customFields: Record<string, unknown>;
 	createdAt: Date;
 	updatedAt: Date;
 }
@@ -78,7 +78,7 @@ export interface Task {
 	attachments: Attachment[];
 	comments: TaskComment[];
 	dependencies: TaskDependency[];
-	customFields: Record<string, any>;
+	customFields: Record<string, unknown>;
 	createdAt: Date;
 	updatedAt: Date;
 }

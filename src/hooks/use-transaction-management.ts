@@ -1,16 +1,16 @@
 import { useState } from "react";
+import type { TransactionResponse } from "~/entities/api/wallet";
 import { api } from "~/trpc/react";
 
 export function useTransactionManagement() {
 	// Transaction edit state
-	const [editingTransaction, setEditingTransaction] = useState<any | null>(
-		null,
-	);
+	const [editingTransaction, setEditingTransaction] =
+		useState<TransactionResponse | null>(null);
 	const [showTransactionEditForm, setShowTransactionEditForm] = useState(false);
 
 	const utils = api.useUtils();
 
-	const handleEditTransaction = (transaction: any) => {
+	const handleEditTransaction = (transaction: TransactionResponse) => {
 		setEditingTransaction(transaction);
 		setShowTransactionEditForm(true);
 	};

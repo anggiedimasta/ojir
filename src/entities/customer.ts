@@ -18,7 +18,7 @@ export interface Customer {
 	socialMedia?: SocialMediaLinks;
 	notes?: string;
 	tags: string[];
-	customFields: Record<string, any>;
+	customFields: Record<string, unknown>;
 	assignedTo?: string;
 	source: CustomerSource;
 	lifetimeValue?: number;

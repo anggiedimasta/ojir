@@ -32,23 +32,6 @@ export interface IntegrationResponse {
 	updatedAt: Date;
 }
 
-export interface WebhookResponse {
-	id: string;
-	url: string;
-	events: string[];
-	isActive: boolean;
-	retryCount: number;
-	maxRetries: number;
-	lastTriggeredAt?: Date;
-	lastSuccessAt?: Date;
-	lastFailureAt?: Date;
-	failureReason?: string;
-	organizationId?: string;
-	userId?: string;
-	createdAt: Date;
-	updatedAt: Date;
-}
-
 export interface ApiKeyResponse {
 	id: string;
 	name: string;
@@ -84,7 +67,7 @@ export interface CreateIntegrationInput {
 		| "notion"
 		| "airtable";
 	name: string;
-	configuration: Record<string, any>;
+	configuration: Record<string, unknown>;
 	permissions: string[];
 	organizationId?: string;
 }
@@ -92,7 +75,7 @@ export interface CreateIntegrationInput {
 export interface UpdateIntegrationInput {
 	id: string;
 	name?: string;
-	configuration?: Record<string, any>;
+	configuration?: Record<string, unknown>;
 	permissions?: string[];
 	isActive?: boolean;
 }
@@ -100,31 +83,7 @@ export interface UpdateIntegrationInput {
 export interface SyncIntegrationInput {
 	id: string;
 	forceSync?: boolean;
-	syncOptions?: Record<string, any>;
-}
-
-export interface CreateWebhookInput {
-	url: string;
-	events: string[];
-	secret?: string;
-	maxRetries?: number;
-	headers?: Record<string, string>;
-	organizationId?: string;
-}
-
-export interface UpdateWebhookInput {
-	id: string;
-	url?: string;
-	events?: string[];
-	isActive?: boolean;
-	maxRetries?: number;
-	headers?: Record<string, string>;
-}
-
-export interface TestWebhookInput {
-	id: string;
-	eventType: string;
-	testData?: Record<string, any>;
+	syncOptions?: Record<string, unknown>;
 }
 
 export interface CreateApiKeyInput {
@@ -158,12 +117,6 @@ export interface RevokeApiKeyInput {
 export interface GetIntegrationsInput extends PaginatedInput, FilterInput {
 	provider?: string;
 	status?: string;
-	organizationId?: string;
-	userId?: string;
-}
-
-export interface GetWebhooksInput extends PaginatedInput, FilterInput {
-	isActive?: boolean;
 	organizationId?: string;
 	userId?: string;
 }

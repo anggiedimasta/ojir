@@ -75,8 +75,8 @@ export function PaymentMethodFilter({
 		);
 	}
 
-	// If no payment methods are available, show a disabled state
 	if (!paymentMethods || paymentMethods.length === 0) {
+		// If no payment methods are available, show a disabled state
 		return (
 			<div className={`relative ${className}`}>
 				<Button
@@ -128,6 +128,7 @@ export function PaymentMethodFilter({
 						const isSelected = value.includes(option.value);
 						return (
 							<button
+								type="button"
 								key={option.value}
 								className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 ${
 									isSelected ? "bg-blue-50 text-blue-600" : "text-slate-700"
@@ -142,6 +143,8 @@ export function PaymentMethodFilter({
 											className="mx-auto mt-0.5 h-2 w-2 text-white"
 											fill="currentColor"
 											viewBox="0 0 20 20"
+											role="img"
+											aria-label="Selected payment method"
 										>
 											<path
 												fillRule="evenodd"
@@ -168,7 +171,19 @@ export function PaymentMethodFilter({
 
 			{/* Backdrop to close dropdown when clicking outside */}
 			{isOpen && (
-				<div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+				<div
+					className="fixed inset-0 z-40"
+					onClick={() => setIsOpen(false)}
+					role="button"
+					tabIndex={0}
+					aria-label="Close dropdown"
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							setIsOpen(false);
+						}
+					}}
+				/>
 			)}
 		</div>
 	);

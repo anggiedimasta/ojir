@@ -55,7 +55,7 @@ export interface AuthProvider {
 	name: string;
 	type: "oauth" | "credentials" | "email";
 	isEnabled: boolean;
-	configuration: Record<string, any>;
+	configuration: Record<string, unknown>;
 }
 
 export interface LoginAttempt extends BaseEntity {
@@ -78,7 +78,7 @@ export interface SecurityEvent extends BaseEntity {
 	type: SecurityEventType;
 	severity: "low" | "medium" | "high" | "critical";
 	description: string;
-	metadata: Record<string, any>;
+	metadata: Record<string, unknown>;
 	ipAddress: string;
 	userAgent: string;
 	resolved: boolean;

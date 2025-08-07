@@ -160,6 +160,7 @@ export function DateFilter({
 				<div className="absolute top-full left-0 z-50 mt-1 w-max min-w-[200px] rounded-md border border-slate-200 bg-white shadow-lg">
 					{dateOptions.map((option) => (
 						<button
+							type="button"
 							key={option.value}
 							className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs hover:bg-slate-50 ${
 								option.value === dateFilter
@@ -176,6 +177,7 @@ export function DateFilter({
 					{/* Custom Range Option with Submenu */}
 					<div className="relative">
 						<button
+							type="button"
 							className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-slate-50 ${
 								dateFilter === "custom"
 									? "bg-blue-50 text-blue-600"
@@ -209,7 +211,10 @@ export function DateFilter({
 
 									<div className="space-y-3">
 										<div className="space-y-2">
-											<label className="font-medium text-slate-600 text-xs">
+											<label
+												htmlFor="fromDate"
+												className="font-medium text-slate-600 text-xs"
+											>
 												From Date
 											</label>
 											<input
@@ -223,7 +228,10 @@ export function DateFilter({
 										</div>
 
 										<div className="space-y-2">
-											<label className="font-medium text-slate-600 text-xs">
+											<label
+												htmlFor="toDate"
+												className="font-medium text-slate-600 text-xs"
+											>
 												To Date
 											</label>
 											<input
@@ -239,12 +247,14 @@ export function DateFilter({
 										<button
 											onClick={handleApplyCustomRange}
 											className="rounded-md bg-blue-600 px-3 py-1.5 text-white text-xs transition-colors hover:bg-blue-700"
+											type="button"
 										>
 											Apply
 										</button>
 										<button
 											onClick={() => setShowCustomSubmenu(false)}
 											className="rounded-md bg-slate-200 px-3 py-1.5 text-slate-700 text-xs transition-colors hover:bg-slate-300"
+											type="button"
 										>
 											Cancel
 										</button>

@@ -83,25 +83,23 @@ export default function SettingsPage() {
 							</div>
 							<div className="space-y-3">
 								<div>
-									<label className="font-medium text-slate-700 text-sm">
-										Name
-									</label>
+									<div className="font-medium text-slate-700 text-sm">Name</div>
 									<p className="text-slate-900">
 										{session?.user?.name || "Not set"}
 									</p>
 								</div>
 								<div>
-									<label className="font-medium text-slate-700 text-sm">
+									<div className="font-medium text-slate-700 text-sm">
 										Email
-									</label>
+									</div>
 									<p className="text-slate-900">
 										{session?.user?.email || "Not set"}
 									</p>
 								</div>
 								<div>
-									<label className="font-medium text-slate-700 text-sm">
+									<div className="font-medium text-slate-700 text-sm">
 										User ID
-									</label>
+									</div>
 									<p className="font-mono text-slate-500 text-sm">
 										{session?.user?.id || "Not available"}
 									</p>
@@ -180,9 +178,9 @@ export default function SettingsPage() {
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
 									<div>
-										<label className="font-medium text-slate-700 text-sm">
+										<div className="font-medium text-slate-700 text-sm">
 											Email Notifications
-										</label>
+										</div>
 										<p className="text-slate-500 text-xs">
 											Receive notifications about new transactions
 										</p>
@@ -193,9 +191,9 @@ export default function SettingsPage() {
 								</div>
 								<div className="flex items-center justify-between">
 									<div>
-										<label className="font-medium text-slate-700 text-sm">
+										<div className="font-medium text-slate-700 text-sm">
 											Push Notifications
-										</label>
+										</div>
 										<p className="text-slate-500 text-xs">
 											Browser push notifications
 										</p>
@@ -216,9 +214,9 @@ export default function SettingsPage() {
 							<div className="space-y-3">
 								<div className="flex items-center justify-between">
 									<div>
-										<label className="font-medium text-slate-700 text-sm">
+										<div className="font-medium text-slate-700 text-sm">
 											Two-Factor Authentication
-										</label>
+										</div>
 										<p className="text-slate-500 text-xs">
 											Add an extra layer of security
 										</p>
@@ -229,9 +227,9 @@ export default function SettingsPage() {
 								</div>
 								<div className="flex items-center justify-between">
 									<div>
-										<label className="font-medium text-slate-700 text-sm">
+										<div className="font-medium text-slate-700 text-sm">
 											Session Management
-										</label>
+										</div>
 										<p className="text-slate-500 text-xs">
 											Manage active sessions
 										</p>

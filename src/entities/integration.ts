@@ -56,7 +56,7 @@ export interface ExternalIntegration extends BaseEntity {
 	providerId: string;
 	name: string;
 	status: IntegrationStatus;
-	configuration: Record<string, any>;
+	configuration: Record<string, unknown>;
 	credentials: IntegrationCredentials;
 	permissions: string[];
 	lastSyncAt?: Date;
@@ -94,45 +94,8 @@ export interface IntegrationCredentials {
 	expiresAt?: Date;
 	tokenType?: string;
 	scope?: string[];
-	additionalData?: Record<string, any>;
+	additionalData?: Record<string, unknown>;
 }
-
-// Webhook Management
-export interface Webhook extends BaseEntity {
-	url: string;
-	events: string[];
-	secret: string;
-	isActive: boolean;
-	retryCount: number;
-	maxRetries: number;
-	lastTriggeredAt?: Date;
-	lastSuccessAt?: Date;
-	lastFailureAt?: Date;
-	failureReason?: string;
-	headers?: Record<string, string>;
-	organizationId?: string;
-	userId?: string;
-}
-
-export interface WebhookDelivery extends BaseEntity {
-	webhookId: string;
-	eventType: string;
-	payload: Record<string, any>;
-	status: WebhookDeliveryStatus;
-	httpStatus?: number;
-	responseBody?: string;
-	errorMessage?: string;
-	attempts: number;
-	nextRetryAt?: Date;
-	deliveredAt?: Date;
-}
-
-export type WebhookDeliveryStatus =
-	| "pending"
-	| "delivered"
-	| "failed"
-	| "retrying"
-	| "cancelled";
 
 // API Keys and Access Management
 export interface ApiKey extends BaseEntity {

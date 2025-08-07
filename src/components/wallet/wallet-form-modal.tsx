@@ -1,16 +1,20 @@
 "use client";
 
-import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
 import { WalletForm } from "~/components/wallet/wallet-form";
-import type { Bank, WalletWithBank } from "~/entities/api/wallet";
+import type {
+	Bank,
+	CreateWalletInput,
+	UpdateWalletInput,
+	WalletWithBank,
+} from "~/entities/api/wallet";
 
 interface WalletFormModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	editingWallet: WalletWithBank | null;
 	banks: Bank[];
-	onSubmit: (data: any) => void;
+	onSubmit: (data: CreateWalletInput | UpdateWalletInput) => void;
 	onCancel: () => void;
 	isLoading: boolean;
 }

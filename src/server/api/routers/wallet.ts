@@ -287,7 +287,7 @@ export const walletRouter = createTRPCRouter({
 				return bank[0]?.iconPath || "wallet";
 			};
 
-			const updateData: any = {
+			const updateData: Record<string, unknown> = {
 				...(input.name && { name: input.name }),
 				...(input.type && { type: input.type }),
 				...(input.bankCode && { bankCode: input.bankCode }),
@@ -782,7 +782,7 @@ export const walletRouter = createTRPCRouter({
 				string,
 				{ totalAmount: number; count: number }
 			>();
-			userTransactions.forEach((t) => {
+			for (const t of userTransactions) {
 				if (t.recipient) {
 					const existing = merchantTotals.get(t.recipient) || {
 						totalAmount: 0,
@@ -795,7 +795,7 @@ export const walletRouter = createTRPCRouter({
 						merchantTotals.set(t.recipient, existing);
 					}
 				}
-			});
+			}
 
 			const topMerchants = Array.from(merchantTotals.entries())
 				.map(([recipient, data]) => ({
@@ -948,7 +948,7 @@ export const walletRouter = createTRPCRouter({
 								) {
 									// Extract just the part before the email footer
 									const cleanMatch = cleanSourceOfFund.match(
-										/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i,
+										/^(.*?Credit Card.*?Mandiri.*?Platinum.*?)\s*\*\*\*\*/i,
 									);
 									if (cleanMatch?.[1]) {
 										cleanSourceOfFund = cleanMatch[1].trim();
@@ -966,7 +966,7 @@ export const walletRouter = createTRPCRouter({
 								if (cleanSourceOfFund && cleanSourceOfFund.length > 255) {
 									// Try to extract just the essential part
 									const essentialMatch = cleanSourceOfFund.match(
-										/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i,
+										/^(.*?Credit Card.*?Mandiri.*?Platinum.*?)/i,
 									);
 									if (essentialMatch?.[1]) {
 										cleanSourceOfFund = essentialMatch[1].trim();
@@ -1124,12 +1124,17 @@ export const walletRouter = createTRPCRouter({
 							}
 						}
 
+						// Ensure we have a valid wallet
+						if (!targetWallet[0]?.id) {
+							throw new Error("No valid wallet found for transaction");
+						}
+
 						// Insert new transaction
 						const newTransaction = await ctx.db
 							.insert(transactions)
 							.values({
 								userId: ctx.session.user.id,
-								walletId: targetWallet[0]?.id,
+								walletId: targetWallet[0].id,
 								recipient: parsedTransaction.recipient,
 								location: parsedTransaction.location,
 								amount: parsedTransaction.amount.toString(),
@@ -1523,71 +1528,5 @@ export const walletRouter = createTRPCRouter({
 				.returning();
 
 			return updatedTransaction[0];
-		}),
-
-	// Bulk update transactions wallet assignment
-	bulkUpdateTransactionWallets: protectedProcedure
-		.input(
-			z.object({
-				walletId: z.string().min(1),
-				transactionIds: z.array(z.string()).min(1),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			// Verify the wallet belongs to the user
-			const wallet = await ctx.db
-				.select()
-				.from(wallets)
-				.where(
-					and(
-						eq(wallets.id, input.walletId),
-						eq(wallets.userId, ctx.session.user.id),
-					),
-				)
-				.limit(1);
-
-			if (!wallet[0]) {
-				throw new Error(
-					"Selected wallet not found or you don't have permission to use it",
-				);
-			}
-
-			// Verify all transactions belong to the user
-			const existingTransactions = await ctx.db
-				.select({ id: transactions.id })
-				.from(transactions)
-				.where(
-					and(
-						inArray(transactions.id, input.transactionIds),
-						eq(transactions.userId, ctx.session.user.id),
-					),
-				);
-
-			if (existingTransactions.length !== input.transactionIds.length) {
-				throw new Error(
-					"Some transactions not found or you don't have permission to edit them",
-				);
-			}
-
-			// Update all transactions to the new wallet
-			const updatedTransactions = await ctx.db
-				.update(transactions)
-				.set({
-					walletId: input.walletId,
-					updatedAt: new Date(),
-				})
-				.where(
-					and(
-						inArray(transactions.id, input.transactionIds),
-						eq(transactions.userId, ctx.session.user.id),
-					),
-				)
-				.returning({ id: transactions.id });
-
-			return {
-				success: true,
-				updatedCount: updatedTransactions.length,
-				message: `Successfully moved ${updatedTransactions.length} transactions to ${wallet[0].name}`,
-			};
 		}),
 });

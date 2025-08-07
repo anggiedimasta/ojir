@@ -2,15 +2,12 @@
 
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { BulkUpdateModal } from "~/components/wallet/bulk-update-modal";
 import { TransactionEditForm } from "~/components/wallet/transaction-edit-form";
 import { TransactionList } from "~/components/wallet/transaction-list";
 import { WalletFilters } from "~/components/wallet/wallet-filters";
 import { WalletFormModal } from "~/components/wallet/wallet-form-modal";
-import { WalletHeader } from "~/components/wallet/wallet-header";
 import { WalletList } from "~/components/wallet/wallet-list";
 import { WalletSummary } from "~/components/wallet/wallet-summary";
-import { useBulkUpdate } from "~/hooks/use-bulk-update";
 import { useTransactionManagement } from "~/hooks/use-transaction-management";
 import { useWalletManagement } from "~/hooks/use-wallet-management";
 import {
@@ -21,18 +18,17 @@ import {
 import { api } from "~/trpc/react";
 import { formatCurrency, formatDate } from "~/utils/formatters";
 
-import type { DateRange } from "~/entities/api/wallet";
+import type { Bank, DateRange, WalletWithBank } from "~/entities/api/wallet";
 
 export default function WalletPage() {
 	const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
 	const { isLoading, setLoading } = useLoadingStore();
 
-	// Wallet selection state
+		// Wallet selection state
 	const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
 
 	// Custom hooks
 	const walletManagement = useWalletManagement();
-	const bulkUpdate = useBulkUpdate();
 	const transactionManagement = useTransactionManagement();
 
 	// Use global wallet filters store
@@ -135,6 +131,7 @@ export default function WalletPage() {
 	const dateRange: DateRange = getDateRange();
 
 	// Reset pagination when filters change
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
 		setCurrentPage(0);
 	}, [
@@ -147,7 +144,6 @@ export default function WalletPage() {
 		sortBy,
 		sortOrder,
 		pageSize,
-		selectedWalletIds,
 	]);
 
 	// Get transactions with server-side filtering, sorting, and pagination
@@ -204,26 +200,6 @@ export default function WalletPage() {
 	const hasWallets = walletsData.some(
 		(wallet) => wallet.name !== "Uncategorized",
 	);
-
-	// Set all wallets as selected by default (only on initial load)
-	useEffect(() => {
-		if (walletsData.length > 0 && selectedWalletIds.length === 0) {
-			const allWalletIds = walletsData.map((wallet) => wallet.id);
-			setSelectedWalletIds(allWalletIds);
-		}
-	}, [walletsData]); // Remove selectedWalletIds.length dependency to allow empty selection
-
-	// Auto-resync effect - runs when wallets are updated or on initial load
-	useEffect(() => {
-		if (hasWallets && walletsData.some((wallet) => wallet.accountNumber)) {
-			// Only trigger if user has wallets with account numbers
-			const timer = setTimeout(() => {
-				autoResyncMutation.mutate({ maxResults: 100 });
-			}, 2000); // 2 second delay to avoid too frequent calls
-
-			return () => clearTimeout(timer);
-		}
-	}, [hasWallets, walletsData.length]); // Trigger when wallets change
 
 	// Get banks for wallet form
 	const { data: banksData = [] } = api.masterData.getBanks.useQuery();
@@ -290,6 +266,27 @@ export default function WalletPage() {
 		},
 	});
 
+	// Set all wallets as selected by default (only on initial load)
+	useEffect(() => {
+		if (walletsData.length > 0 && selectedWalletIds.length === 0) {
+			const allWalletIds = walletsData.map((wallet) => wallet.id);
+			setSelectedWalletIds(allWalletIds);
+		}
+	}, [walletsData, selectedWalletIds.length]); // Include selectedWalletIds.length dependency
+
+	// One-time sync on first mount when user has wallets with account numbers
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		if (hasWallets && walletsData.some((wallet) => wallet.accountNumber)) {
+			// Only trigger if user has wallets with account numbers
+			const timer = setTimeout(() => {
+				autoResyncMutation.mutate({ maxResults: 100 });
+			}, 2000); // 2 second delay to avoid too frequent calls
+
+			return () => clearTimeout(timer);
+		}
+	}, [hasWallets, walletsData.length]); // Trigger when wallets change
+
 	const handleWalletSelectionChange = (newSelectedIds: string[]) => {
 		// Simple wallet selection without bulk update
 		setSelectedWalletIds(newSelectedIds);
@@ -320,7 +317,7 @@ export default function WalletPage() {
 					{/* Wallet Management Section */}
 					<div className="mb-6">
 						<WalletList
-							wallets={walletsData as any}
+							wallets={walletsData as WalletWithBank[]}
 							selectedWalletIds={selectedWalletIds}
 							onSelectWallets={handleWalletSelectionChange}
 							onAddWallet={walletManagement.handleAddWallet}
@@ -335,7 +332,7 @@ export default function WalletPage() {
 						isOpen={walletManagement.showWalletForm}
 						onClose={walletManagement.handleCancelWalletForm}
 						editingWallet={walletManagement.editingWallet}
-						banks={banksData as any}
+						banks={banksData as Bank[]}
 						onSubmit={walletManagement.handleWalletSubmit}
 						onCancel={walletManagement.handleCancelWalletForm}
 						isLoading={
@@ -392,7 +389,7 @@ export default function WalletPage() {
 						isLoading={isLoading || autoResyncMutation.isPending}
 						hasWallets={hasWallets}
 						selectedWalletIds={selectedWalletIds}
-						wallets={walletsData as any}
+						wallets={walletsData as WalletWithBank[]}
 						formatCurrency={formatCurrency}
 						formatDate={formatDate}
 						onEditTransaction={transactionManagement.handleEditTransaction}

@@ -17,7 +17,12 @@ const Label = forwardRef<HTMLLabelElement, LabelProps>(
 		};
 
 		return (
-			<label ref={ref} className={cn(variants[variant], className)} {...props}>
+			<label
+				ref={ref}
+				className={cn(variants[variant], className)}
+				{...props}
+				htmlFor={props.htmlFor}
+			>
 				{children}
 			</label>
 		);
