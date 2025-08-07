@@ -3,11 +3,11 @@ import { auth } from "~/server/auth";
 import { DashboardContent } from "./_components/dashboard-content";
 
 export default async function DashboardPage() {
-  const session = await auth();
+	const session = await auth();
 
-  if (!session) {
-    redirect("/signin");
-  }
+	if (!session) {
+		redirect("/signin");
+	}
 
-  return <DashboardContent user={session.user} />;
+	return <DashboardContent user={session.user} />;
 }

@@ -3,112 +3,108 @@ import { DateFilter } from "~/components/ui/date-filter";
 import { SearchInput } from "~/components/ui/search-input";
 import { SortControls } from "~/components/ui/sort-controls";
 
+import { Download, RefreshCw } from "lucide-react";
 import { BankFilter } from "~/components/ui/bank-filter";
-import { PaymentMethodFilter } from "~/components/ui/payment-method-filter";
-import { LimitFilter } from "~/components/ui/limit-filter";
-import { RefreshCw, Download } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { LimitFilter } from "~/components/ui/limit-filter";
+import { PaymentMethodFilter } from "~/components/ui/payment-method-filter";
 import type { WalletFiltersProps } from "~/entities/api/wallet";
 
-
-
 export function WalletFilters({
-  dateFilter,
-  onDateFilterChange,
-  customStartDate,
-  customEndDate,
-  onCustomStartDateChange,
-  onCustomEndDateChange,
-  searchQuery,
-  onSearchQueryChange,
-  recipientBank,
-  onRecipientBankChange,
-  paymentMethod,
-  onPaymentMethodChange,
-  sortBy,
-  sortOrder,
-  onSortByChange,
-  onSortOrderChange,
-  pageSize,
-  onPageSizeChange,
-  totalCount,
-  dateRange,
-  onSync,
-  isSyncPending = false,
-  onExport,
-}: WalletFiltersProps & { onSync?: () => void; isSyncPending?: boolean; onExport?: () => void }) {
-  return (
-    <Card className="p-4 mb-6 bg-white border-slate-200 shadow-lg">
-      <div className="flex flex-col lg:flex-row gap-3 items-center">
-        <div className="flex gap-2 items-center flex-shrink-0">
-          <DateFilter
-            dateFilter={dateFilter}
-            onDateFilterChange={onDateFilterChange}
-            customStartDate={customStartDate}
-            customEndDate={customEndDate}
-            onCustomStartDateChange={onCustomStartDateChange}
-            onCustomEndDateChange={onCustomEndDateChange}
-            dateRange={dateRange}
-          />
+	dateFilter,
+	onDateFilterChange,
+	customStartDate,
+	customEndDate,
+	onCustomStartDateChange,
+	onCustomEndDateChange,
+	searchQuery,
+	onSearchQueryChange,
+	recipientBank,
+	onRecipientBankChange,
+	paymentMethod,
+	onPaymentMethodChange,
+	sortBy,
+	sortOrder,
+	onSortByChange,
+	onSortOrderChange,
+	pageSize,
+	onPageSizeChange,
+	totalCount,
+	dateRange,
+	onSync,
+	isSyncPending = false,
+	onExport,
+}: WalletFiltersProps & {
+	onSync?: () => void;
+	isSyncPending?: boolean;
+	onExport?: () => void;
+}) {
+	return (
+		<Card className="mb-6 border-slate-200 bg-white p-4 shadow-lg">
+			<div className="flex flex-col items-center gap-3 lg:flex-row">
+				<div className="flex flex-shrink-0 items-center gap-2">
+					<DateFilter
+						dateFilter={dateFilter}
+						onDateFilterChange={onDateFilterChange}
+						customStartDate={customStartDate}
+						customEndDate={customEndDate}
+						onCustomStartDateChange={onCustomStartDateChange}
+						onCustomEndDateChange={onCustomEndDateChange}
+						dateRange={dateRange}
+					/>
 
-          <BankFilter
-            value={recipientBank}
-            onChange={onRecipientBankChange}
-          />
+					<BankFilter value={recipientBank} onChange={onRecipientBankChange} />
 
-          <PaymentMethodFilter
-            value={paymentMethod}
-            onChange={onPaymentMethodChange}
-          />
-        </div>
+					<PaymentMethodFilter
+						value={paymentMethod}
+						onChange={onPaymentMethodChange}
+					/>
+				</div>
 
-        <SearchInput
-          value={searchQuery}
-          onChange={onSearchQueryChange}
-          placeholder="Search transactions..."
-        />
+				<SearchInput
+					value={searchQuery}
+					onChange={onSearchQueryChange}
+					placeholder="Search transactions..."
+				/>
 
-        <div className="flex gap-2 items-center flex-shrink-0">
-          <SortControls
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSortByChange={onSortByChange}
-            onSortOrderChange={onSortOrderChange}
-          />
+				<div className="flex flex-shrink-0 items-center gap-2">
+					<SortControls
+						sortBy={sortBy}
+						sortOrder={sortOrder}
+						onSortByChange={onSortByChange}
+						onSortOrderChange={onSortOrderChange}
+					/>
 
-          <LimitFilter
-            value={pageSize}
-            onChange={onPageSizeChange}
-          />
+					<LimitFilter value={pageSize} onChange={onPageSizeChange} />
 
-          <div className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-2 rounded-lg flex-shrink-0">
-            {totalCount || 0} transaction{(totalCount || 0) !== 1 ? 's' : ''}
-          </div>
+					<div className="flex-shrink-0 rounded-lg bg-slate-100 px-3 py-2 font-medium text-slate-600 text-sm">
+						{totalCount || 0} transaction{(totalCount || 0) !== 1 ? "s" : ""}
+					</div>
 
-          {onSync && (
-            <Button
-              onClick={onSync}
-              disabled={isSyncPending}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all duration-200"
-              title="Sync emails"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncPending ? 'animate-spin' : ''}`} />
-            </Button>
-          )}
+					{onSync && (
+						<Button
+							onClick={onSync}
+							disabled={isSyncPending}
+							className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 transition-all duration-200 hover:bg-slate-200"
+							title="Sync emails"
+						>
+							<RefreshCw
+								className={`h-4 w-4 ${isSyncPending ? "animate-spin" : ""}`}
+							/>
+						</Button>
+					)}
 
-          {onExport && (
-            <Button
-              onClick={onExport}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-all duration-200"
-              title="Export transactions"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-
-    </Card>
-  );
+					{onExport && (
+						<Button
+							onClick={onExport}
+							className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 transition-all duration-200 hover:bg-slate-200"
+							title="Export transactions"
+						>
+							<Download className="h-4 w-4" />
+						</Button>
+					)}
+				</div>
+			</div>
+		</Card>
+	);
 }

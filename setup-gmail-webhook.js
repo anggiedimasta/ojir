@@ -1,23 +1,26 @@
-import { setupGmailWatch, storeUserGmailToken } from './src/server/gmail-setup.js';
+import {
+	setupGmailWatch,
+	storeUserGmailToken,
+} from "./src/server/gmail-setup.js";
 
 // Example: Setup Gmail webhook for a user
 async function setupUserGmailWebhook(userId, accessToken, refreshToken) {
-  try {
-    console.log('🔧 Setting up Gmail webhook for user:', userId);
+	try {
+		console.log("🔧 Setting up Gmail webhook for user:", userId);
 
-    // 1. Store user's OAuth tokens
-    await storeUserGmailToken(userId, accessToken, refreshToken);
-    console.log('✅ OAuth tokens stored');
+		// 1. Store user's OAuth tokens
+		await storeUserGmailToken(userId, accessToken, refreshToken);
+		console.log("✅ OAuth tokens stored");
 
-    // 2. Setup Gmail watch
-    const watchResult = await setupGmailWatch(userId, accessToken);
-    console.log('✅ Gmail watch setup complete:', watchResult);
+		// 2. Setup Gmail watch
+		const watchResult = await setupGmailWatch(userId, accessToken);
+		console.log("✅ Gmail watch setup complete:", watchResult);
 
-    return watchResult;
-  } catch (error) {
-    console.error('❌ Error setting up Gmail webhook:', error);
-    throw error;
-  }
+		return watchResult;
+	} catch (error) {
+		console.error("❌ Error setting up Gmail webhook:", error);
+		throw error;
+	}
 }
 
 // Example usage

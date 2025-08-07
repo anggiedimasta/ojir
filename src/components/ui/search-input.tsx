@@ -1,17 +1,22 @@
 import { Search } from "lucide-react";
 import type { SearchInputProps } from "~/entities/api/wallet";
 
-export function SearchInput({ value, onChange, placeholder = "Search...", className = "" }: SearchInputProps) {
-  return (
-    <div className={`relative flex-1 ${className}`}>
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-      <input
-        type="text"
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-      />
-    </div>
-  );
+export function SearchInput({
+	value,
+	onChange,
+	placeholder = "Search...",
+	className = "",
+}: SearchInputProps) {
+	return (
+		<div className={`relative flex-1 ${className}`}>
+			<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-slate-400" />
+			<input
+				type="text"
+				placeholder={placeholder}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				className="w-full rounded-lg border border-slate-300 bg-white py-2 pr-4 pl-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+			/>
+		</div>
+	);
 }

@@ -1,33 +1,33 @@
-import { Card } from "./card";
 import type { LucideIcon } from "lucide-react";
 import type { SummaryCardProps } from "~/entities/api/wallet";
+import { Card } from "./card";
 
 export function SummaryCard({
-  title,
-  value,
-  icon: Icon,
-  gradient,
-  borderColor,
-  iconBgColor,
-  iconColor,
-  valueColor,
-  titleColor,
+	title,
+	value,
+	icon: Icon,
+	gradient,
+	borderColor,
+	iconBgColor,
+	iconColor,
+	valueColor,
+	titleColor,
 }: SummaryCardProps) {
-  return (
-    <Card className={`p-6 ${gradient} ${borderColor} shadow-lg hover:shadow-xl transition-all duration-300`}>
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-4">
-          <p className={`text-sm font-medium ${titleColor}`}>{title}</p>
-          <div className={`${iconBgColor} p-3 rounded-xl flex-shrink-0`}>
-            <Icon className={`w-6 h-6 ${iconColor}`} />
-          </div>
-        </div>
-        <div className="flex-1 flex items-end">
-          <p className={`text-xl font-bold ${valueColor}`}>
-            {value}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
+	return (
+		<Card
+			className={`p-6 ${gradient} ${borderColor} shadow-lg transition-all duration-300 hover:shadow-xl`}
+		>
+			<div className="flex h-full flex-col">
+				<div className="mb-4 flex items-center justify-between">
+					<p className={`font-medium text-sm ${titleColor}`}>{title}</p>
+					<div className={`${iconBgColor} flex-shrink-0 rounded-xl p-3`}>
+						<Icon className={`h-6 w-6 ${iconColor}`} />
+					</div>
+				</div>
+				<div className="flex flex-1 items-end">
+					<p className={`font-bold text-xl ${valueColor}`}>{value}</p>
+				</div>
+			</div>
+		</Card>
+	);
 }
