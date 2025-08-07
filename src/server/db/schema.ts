@@ -275,6 +275,29 @@ export const paymentMethods = createTable("payment_method", {
   isActiveIdx: index("payment_method_is_active_idx").on(paymentMethod.isActive),
 }));
 
+// User Gmail OAuth tokens table
+export const userGmailTokens = createTable("user_gmail_tokens", {
+  id: varchar("id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+    () => new Date()
+  ),
+}, (userGmailToken) => ({
+  userIdIdx: index("user_gmail_token_user_id_idx").on(userGmailToken.userId),
+  expiresAtIdx: index("user_gmail_token_expires_at_idx").on(userGmailToken.expiresAt),
+}));
+
 // Relations - All relations defined after table definitions
 export const authUsersRelations = relations(authUsers, ({ many }) => ({
   accounts: many(authAccounts),
@@ -282,6 +305,7 @@ export const authUsersRelations = relations(authUsers, ({ many }) => ({
   calendarEvents: many(calendarEvents),
   transactions: many(transactions),
   wallets: many(wallets),
+  gmailTokens: many(userGmailTokens),
 }));
 
 export const authAccountsRelations = relations(authAccounts, ({ one }) => ({
@@ -317,4 +341,11 @@ export const walletsRelations = relations(wallets, ({ one, many }) => ({
 
 export const banksRelations = relations(banks, ({ many }) => ({
   wallets: many(wallets),
+}));
+
+export const userGmailTokensRelations = relations(userGmailTokens, ({ one }) => ({
+  user: one(authUsers, {
+    fields: [userGmailTokens.userId],
+    references: [authUsers.id],
+  }),
 }));

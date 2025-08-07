@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { db } from '~/server/db';
-import { transactions, wallets } from '~/server/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { parseTransactionEmail } from '~/server/api/gmail';
-import { google } from 'googleapis';
-import { publishers } from '~/lib/pubsub-client';
+import { processGmailWebhook } from '~/server/gmail-processor';
 
 // Verify the webhook is from Google
 async function verifyWebhook(request: NextRequest) {
@@ -38,16 +33,8 @@ export async function POST(request: NextRequest) {
       const notification = JSON.parse(data);
 
       if (notification.emailAddress && notification.historyId) {
-        // Publish Gmail notification to Pub/Sub for processing
-        await publishers.publishGmailNotification({
-          emailAddress: notification.emailAddress,
-          historyId: notification.historyId,
-          messageId: notification.messageId,
-          threadId: notification.threadId
-        });
-
-        // Process email immediately (you can also make this async via Pub/Sub)
-        await processNewEmail(notification.emailAddress, notification.historyId);
+        // Process the Gmail webhook notification
+        await processGmailWebhook(notification);
       }
     }
 
@@ -55,142 +42,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Webhook error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-async function processNewEmail(emailAddress: string, historyId: string) {
-  try {
-    // Get user by email
-    // Note: You'll need to implement user lookup by email
-    // const user = await getUserByEmail(emailAddress);
-
-    // For now, we'll process for all users (you should implement proper user lookup)
-    const allUsers = await db.select().from(wallets).groupBy(wallets.userId);
-
-    for (const userWallet of allUsers) {
-      const userId = userWallet.userId;
-
-      // Get user's access token (you'll need to implement this)
-      // const accessToken = await getUserAccessToken(userId);
-
-      // Fetch recent messages
-      // const { messages } = await fetchGmailMessages(accessToken, { maxResults: 10 });
-
-      // Process each new message
-      // for (const message of messages) {
-      //   const parsedTransaction = parseTransactionEmail(message);
-      //   if (parsedTransaction) {
-      //     await saveTransaction(userId, parsedTransaction);
-      //   }
-      // }
-    }
-  } catch (error) {
-    console.error('Error processing new email:', error);
-  }
-}
-
-async function saveTransaction(userId: string, parsedTransaction: any) {
-  try {
-    // Check if transaction already exists
-    const existingTransaction = await db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.transactionRefNo, parsedTransaction.transactionRefNo),
-          eq(transactions.userId, userId)
-        )
-      )
-      .limit(1);
-
-    if (existingTransaction.length > 0) {
-      return; // Transaction already exists
-    }
-
-    // Find matching wallet
-    let targetWallet = await db
-      .select()
-      .from(wallets)
-      .where(
-        and(
-          eq(wallets.userId, userId),
-          eq(wallets.bankCode, parsedTransaction.bankSender?.toLowerCase() || 'unknown')
-        )
-      )
-      .limit(1);
-
-    if (!targetWallet[0]) {
-      // Use uncategorized wallet
-      targetWallet = await db
-        .select()
-        .from(wallets)
-        .where(
-          and(
-            eq(wallets.userId, userId),
-            eq(wallets.name, 'Uncategorized')
-          )
-        )
-        .limit(1);
-    }
-
-    if (targetWallet[0]) {
-      // Insert new transaction
-      const newTransaction = await db.insert(transactions).values({
-        userId: userId,
-        walletId: targetWallet[0].id,
-        recipient: parsedTransaction.recipient,
-        location: parsedTransaction.location,
-        amount: parsedTransaction.amount.toString(),
-        fee: parsedTransaction.fee.toString(),
-        totalAmount: parsedTransaction.totalAmount.toString(),
-        currency: parsedTransaction.currency,
-        transactionDate: parsedTransaction.transactionDate,
-        transactionRefNo: parsedTransaction.transactionRefNo,
-        qrisRefNo: parsedTransaction.qrisRefNo,
-        merchantPan: parsedTransaction.merchantPan,
-        customerPan: parsedTransaction.customerPan,
-        acquirer: parsedTransaction.acquirer,
-        terminalId: parsedTransaction.terminalId,
-        sourceOfFund: parsedTransaction.sourceOfFund,
-        sourceAccount: parsedTransaction.sourceAccount,
-        bankSender: parsedTransaction.bankSender,
-        emailSubject: parsedTransaction.emailSubject,
-        transactionType: parsedTransaction.transactionType,
-        status: parsedTransaction.status,
-        direction: parsedTransaction.direction,
-        virtualAccountNo: parsedTransaction.virtualAccountNo,
-      }).returning();
-
-      // Publish wallet update notification
-      if (newTransaction[0]) {
-        await publishers.publishWalletUpdate({
-          userId: userId,
-          walletId: targetWallet[0].id,
-          transactionId: newTransaction[0].id,
-          amount: parsedTransaction.amount,
-          type: parsedTransaction.direction === 'debit' ? 'debit' : 'credit',
-          balance: 0, // You should calculate actual balance here
-          updatedAt: new Date().toISOString()
-        });
-
-        // Publish user notification
-        await publishers.publishNotificationEvent({
-          userId: userId,
-          type: 'transaction',
-          title: 'New Transaction',
-          message: `${parsedTransaction.direction === 'debit' ? 'Debit' : 'Credit'} of ${parsedTransaction.currency} ${parsedTransaction.amount.toLocaleString()}`,
-          data: {
-            transactionId: newTransaction[0].id,
-            amount: parsedTransaction.amount,
-            recipient: parsedTransaction.recipient,
-            transactionRefNo: parsedTransaction.transactionRefNo
-          },
-          priority: 'medium',
-          createdAt: new Date().toISOString()
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error saving transaction:', error);
   }
 }
