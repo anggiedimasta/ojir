@@ -173,28 +173,27 @@ export const calendarRouter = createTRPCRouter({
 						publicUrl: `/dashboard/calendar/event/${encodeURIComponent(input.eventId)}`,
 						message: "Event URL ready to share",
 					};
-				} else {
-					// For local events, verify it exists and belongs to the user
-					const localEvent = await ctx.db.query.calendarEvents.findFirst({
-						where: and(
-							eq(calendarEvents.id, input.eventId),
-							eq(calendarEvents.userId, ctx.session.user.id),
-						),
-					});
-
-					if (!localEvent) {
-						throw new TRPCError({
-							code: "NOT_FOUND",
-							message: "Event not found",
-						});
-					}
-
-					return {
-						success: true,
-						publicUrl: `/dashboard/calendar/event/${encodeURIComponent(input.eventId)}`,
-						message: "Event URL ready to share",
-					};
 				}
+				// For local events, verify it exists and belongs to the user
+				const localEvent = await ctx.db.query.calendarEvents.findFirst({
+					where: and(
+						eq(calendarEvents.id, input.eventId),
+						eq(calendarEvents.userId, ctx.session.user.id),
+					),
+				});
+
+				if (!localEvent) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Event not found",
+					});
+				}
+
+				return {
+					success: true,
+					publicUrl: `/dashboard/calendar/event/${encodeURIComponent(input.eventId)}`,
+					message: "Event URL ready to share",
+				};
 			} catch (error) {
 				console.error("Error sharing event:", error);
 

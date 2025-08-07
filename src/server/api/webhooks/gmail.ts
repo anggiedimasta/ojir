@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { handleGmailWebhook } from "../../gmail-webhook";
+import { processGmailWebhook } from "../../gmail-processor";
 
 interface GmailPushNotification {
 	emailAddress: string;
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Process the Gmail notification
-		await handleGmailWebhook(notification);
+		await processGmailWebhook(notification);
 
 		console.log("✅ Gmail webhook processed successfully");
 		return NextResponse.json({ success: true });

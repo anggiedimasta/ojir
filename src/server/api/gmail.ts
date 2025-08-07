@@ -163,7 +163,7 @@ function parseBankMandiriDateTime(dateStr: string, timeStr: string): Date {
 		// Convert "27 Jul 2025" and "09:25:57 WIB" to Date
 		const dateTimeStr = `${dateStr} ${timeStr.replace(" WIB", "+07:00")}`;
 		const parsedDate = new Date(dateTimeStr);
-		if (!isNaN(parsedDate.getTime())) {
+		if (!Number.isNaN(parsedDate.getTime())) {
 			return parsedDate;
 		}
 	} catch (error) {
@@ -318,7 +318,7 @@ function parseBankMandiriTransferEmail(
 			const bankAccountMatch = recipientBankFull.match(
 				/Bank\s+([^-]+)\s*-\s*(\d+)/i,
 			);
-			if (bankAccountMatch && bankAccountMatch[1] && bankAccountMatch[2]) {
+			if (bankAccountMatch?.[1] && bankAccountMatch[2]) {
 				const bankName = bankAccountMatch[1]
 					.trim()
 					.replace(/&nbsp;/g, " ")
@@ -330,7 +330,7 @@ function parseBankMandiriTransferEmail(
 			} else {
 				// Fallback: try to extract just bank name
 				const bankMatch = recipientBankFull.match(/Bank\s+([^-]+)/i);
-				if (bankMatch && bankMatch[1]) {
+				if (bankMatch?.[1]) {
 					const cleanBankName = bankMatch[1]
 						.trim()
 						.replace(/&nbsp;/g, " ")
@@ -751,7 +751,7 @@ function parseBankMandiriMerchantEmail(
 			const cleanMatch = finalSourceOfFund.match(
 				/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i,
 			);
-			if (cleanMatch && cleanMatch[1]) {
+			if (cleanMatch?.[1]) {
 				finalSourceOfFund = cleanMatch[1].trim();
 			} else {
 				// Fallback: just take everything before "Save this email"
@@ -768,7 +768,7 @@ function parseBankMandiriMerchantEmail(
 			const essentialMatch = finalSourceOfFund.match(
 				/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i,
 			);
-			if (essentialMatch && essentialMatch[1]) {
+			if (essentialMatch?.[1]) {
 				finalSourceOfFund = essentialMatch[1].trim();
 			} else {
 				// Last resort: truncate to 255 characters
@@ -1043,16 +1043,16 @@ export function parseBankMandiriEmail(
 		// Parse based on transaction type
 		if (isTopUp) {
 			return parseTopUpFromText(emailBody, subjectHeader, fromHeader);
-		} else if (isQRTransfer || isBIFastTransfer) {
+		}
+		if (isQRTransfer || isBIFastTransfer) {
 			return parseTransferFromText(
 				emailBody,
 				subjectHeader,
 				isQRTransfer,
 				fromHeader,
 			);
-		} else {
-			return parseMerchantPaymentFromText(emailBody, subjectHeader, fromHeader);
 		}
+		return parseMerchantPaymentFromText(emailBody, subjectHeader, fromHeader);
 	} catch (error) {
 		return null;
 	}
@@ -1154,7 +1154,7 @@ function parseTransferFromText(
 		// Extract bank name for location
 		let location = "";
 		const bankMatch = emailBody.match(/Bank\s+([^-]+)/i);
-		if (bankMatch && bankMatch[1]) {
+		if (bankMatch?.[1]) {
 			const cleanBankName = bankMatch[1]
 				.trim()
 				.replace(/&nbsp;/g, " ")
@@ -1251,7 +1251,7 @@ function parseSimplePLNPrabayar(
 			/(\w+,\s*\d+\s+\w+\s+\d{4})\s+pukul\s+(\d{2}\.\d{2})/i,
 		);
 		const dateStr = dateTimeMatch?.[1];
-		const timeStr = dateTimeMatch?.[2]?.replace(".", ":") + ":00 WIB";
+		const timeStr = `${dateTimeMatch?.[2]?.replace(".", ":")}:00 WIB`;
 
 		// Extract source account (handle both masked and unmasked formats)
 		const sourceMatch =
@@ -1325,7 +1325,7 @@ function parseMerchantPaymentFromText(
 			/Recipient[^]*?([^]*?)\s*(?:Date|Time|Transaction|$)/i,
 		);
 		let location = "";
-		if (locationMatch && locationMatch[1]) {
+		if (locationMatch?.[1]) {
 			// Extract the location part (usually after the merchant name)
 			const locationPart = locationMatch[1].trim();
 			// Look for location pattern (CITY - COUNTRY format)

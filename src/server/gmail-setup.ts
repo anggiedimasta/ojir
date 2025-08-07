@@ -158,7 +158,7 @@ async function refreshUserToken(
 				userId,
 				credentials.access_token,
 				refreshToken,
-				credentials.expires_in,
+				(credentials as any).expires_in || 3600,
 			);
 
 			return credentials.access_token;

@@ -49,34 +49,37 @@ export function TransactionItem({
 				),
 				bgColor: "bg-blue-50 border-blue-200",
 			};
-		} else if (isQRTransfer(transaction)) {
+		}
+		if (isQRTransfer(transaction)) {
 			return {
 				icon: <Icon icon={QrCode} size="md" className="text-orange-600" />,
 				bgColor: "bg-orange-50 border-orange-200",
 			};
-		} else if (isInternalTransfer(transaction.recipient)) {
+		}
+		if (isInternalTransfer(transaction.recipient)) {
 			return {
 				icon: (
 					<Icon icon={ArrowRightLeft} size="md" className="text-green-600" />
 				),
 				bgColor: "bg-green-50 border-green-200",
 			};
-		} else if (transaction.qrisRefNo) {
+		}
+		if (transaction.qrisRefNo) {
 			return {
 				icon: <Icon icon={QrCode} size="md" className="text-green-600" />,
 				bgColor: "bg-green-50 border-green-200",
 			};
-		} else if (isVirtualAccount(transaction.recipient)) {
+		}
+		if (isVirtualAccount(transaction.recipient)) {
 			return {
 				icon: <Icon icon={Smartphone} size="md" className="text-purple-600" />,
 				bgColor: "bg-purple-50 border-purple-200",
 			};
-		} else {
-			return {
-				icon: <Icon icon={CreditCard} size="md" className="text-slate-600" />,
-				bgColor: "bg-slate-50 border-slate-200",
-			};
 		}
+		return {
+			icon: <Icon icon={CreditCard} size="md" className="text-slate-600" />,
+			bgColor: "bg-slate-50 border-slate-200",
+		};
 	};
 
 	const iconData = getTransactionIcon(transaction);

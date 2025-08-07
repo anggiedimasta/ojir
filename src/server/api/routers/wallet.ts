@@ -526,7 +526,6 @@ export const walletRouter = createTRPCRouter({
 								? asc(transactions.recipient)
 								: desc(transactions.recipient);
 						break;
-					case "date":
 					default:
 						orderBy =
 							input.sortOrder === "asc"
@@ -951,7 +950,7 @@ export const walletRouter = createTRPCRouter({
 									const cleanMatch = cleanSourceOfFund.match(
 										/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)\s*\*\*\*\*/i,
 									);
-									if (cleanMatch && cleanMatch[1]) {
+									if (cleanMatch?.[1]) {
 										cleanSourceOfFund = cleanMatch[1].trim();
 									} else {
 										// Fallback: just take everything before "Save this email"
@@ -969,7 +968,7 @@ export const walletRouter = createTRPCRouter({
 									const essentialMatch = cleanSourceOfFund.match(
 										/^([^]*?Credit Card[^]*?Mandiri[^]*?Platinum[^]*?)/i,
 									);
-									if (essentialMatch && essentialMatch[1]) {
+									if (essentialMatch?.[1]) {
 										cleanSourceOfFund = essentialMatch[1].trim();
 									} else {
 										// Last resort: truncate to 255 characters
@@ -1130,7 +1129,7 @@ export const walletRouter = createTRPCRouter({
 							.insert(transactions)
 							.values({
 								userId: ctx.session.user.id,
-								walletId: targetWallet[0]!.id,
+								walletId: targetWallet[0]?.id,
 								recipient: parsedTransaction.recipient,
 								location: parsedTransaction.location,
 								amount: parsedTransaction.amount.toString(),

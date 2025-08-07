@@ -29,7 +29,7 @@ export default function CalendarPage() {
 
 	const parseDateFromUrl = (dateStr: string) => {
 		const parts = dateStr.split("-").map(Number);
-		if (parts.length === 3 && parts.every((part) => !isNaN(part))) {
+		if (parts.length === 3 && parts.every((part) => !Number.isNaN(part))) {
 			// We know these are numbers because of the every() check above
 			const year = parts[0] as number;
 			const month = parts[1] as number;
@@ -57,7 +57,7 @@ export default function CalendarPage() {
 	useEffect(() => {
 		if (dateFromUrl) {
 			const newDate = parseDateFromUrl(dateFromUrl);
-			if (!isNaN(newDate.getTime())) {
+			if (!Number.isNaN(newDate.getTime())) {
 				setCurrentDate(newDate);
 			}
 		}

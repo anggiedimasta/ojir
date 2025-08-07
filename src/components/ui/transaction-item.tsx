@@ -39,7 +39,7 @@ export function TransactionItem({
 
 	const isVirtualAccount = (transaction: TransactionResponse) => {
 		// First check if virtualAccountNo is present
-		if (transaction.virtualAccountNo && transaction.virtualAccountNo.trim()) {
+		if (transaction.virtualAccountNo?.trim()) {
 			return true;
 		}
 		// Fallback to checking recipient for virtual account patterns
@@ -75,32 +75,35 @@ export function TransactionItem({
 				icon: <ArrowRightLeft className="h-5 w-5 text-blue-600" />,
 				bgColor: "bg-blue-50 border-blue-200",
 			};
-		} else if (isQRTransfer(transaction)) {
+		}
+		if (isQRTransfer(transaction)) {
 			return {
 				icon: <QrCode className="h-5 w-5 text-orange-600" />,
 				bgColor: "bg-orange-50 border-orange-200",
 			};
-		} else if (isInternalTransfer(transaction.recipient)) {
+		}
+		if (isInternalTransfer(transaction.recipient)) {
 			return {
 				icon: <ArrowRightLeft className="h-5 w-5 text-green-600" />,
 				bgColor: "bg-green-50 border-green-200",
 			};
-		} else if (transaction.qrisRefNo) {
+		}
+		if (transaction.qrisRefNo) {
 			return {
 				icon: <QrCode className="h-5 w-5 text-green-600" />,
 				bgColor: "bg-green-50 border-green-200",
 			};
-		} else if (isVirtualAccount(transaction)) {
+		}
+		if (isVirtualAccount(transaction)) {
 			return {
 				icon: <Smartphone className="h-5 w-5 text-purple-600" />,
 				bgColor: "bg-purple-50 border-purple-200",
 			};
-		} else {
-			return {
-				icon: <CreditCard className="h-5 w-5 text-slate-600" />,
-				bgColor: "bg-slate-50 border-slate-200",
-			};
 		}
+		return {
+			icon: <CreditCard className="h-5 w-5 text-slate-600" />,
+			bgColor: "bg-slate-50 border-slate-200",
+		};
 	};
 
 	const iconData = getTransactionIcon(transaction);

@@ -6,10 +6,10 @@ import {
 	ChevronRight,
 	Home,
 	LayoutDashboard,
+	Mail,
 	Settings,
 	User,
 	Wallet,
-	Mail,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";

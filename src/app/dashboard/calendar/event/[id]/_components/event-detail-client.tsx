@@ -130,7 +130,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 				<div className="mx-auto p-4 sm:p-6 lg:p-8">
 					<div className="flex min-h-screen items-center justify-center">
 						<div className="text-center">
-							<div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-emerald-500 border-b-2"></div>
+							<div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-emerald-500 border-b-2" />
 							<p className="text-gray-600">Loading event details...</p>
 						</div>
 					</div>
@@ -414,7 +414,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 									{hasOrganizer(event) && (
 										<div className="border-b pb-3">
 											<div className="flex items-center gap-2">
-												<div className="h-2 w-2 rounded-full bg-emerald-500"></div>
+												<div className="h-2 w-2 rounded-full bg-emerald-500" />
 												<span className="font-medium text-gray-900 text-sm">
 													{event.organizer.displayName || event.organizer.email}
 												</span>
@@ -445,7 +445,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 																		? "bg-yellow-500"
 																		: "bg-gray-300"
 														}`}
-													></div>
+													/>
 													<span className="text-gray-900 text-sm">
 														{attendee.displayName || attendee.email}
 													</span>
@@ -484,7 +484,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 									<div className="border-t pt-3">
 										<div className="flex gap-4 text-gray-600 text-xs">
 											<span className="flex items-center gap-1">
-												<div className="h-2 w-2 rounded-full bg-green-500"></div>
+												<div className="h-2 w-2 rounded-full bg-green-500" />
 												{
 													event.attendees.filter(
 														(a: GoogleCalendarAttendee) =>
@@ -494,7 +494,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 												yes
 											</span>
 											<span className="flex items-center gap-1">
-												<div className="h-2 w-2 rounded-full bg-gray-300"></div>
+												<div className="h-2 w-2 rounded-full bg-gray-300" />
 												{
 													event.attendees.filter(
 														(a: GoogleCalendarAttendee) =>
@@ -508,7 +508,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 													a.responseStatus === "declined",
 											).length > 0 && (
 												<span className="flex items-center gap-1">
-													<div className="h-2 w-2 rounded-full bg-red-500"></div>
+													<div className="h-2 w-2 rounded-full bg-red-500" />
 													{
 														event.attendees.filter(
 															(a: GoogleCalendarAttendee) =>
@@ -523,7 +523,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 													a.responseStatus === "tentative",
 											).length > 0 && (
 												<span className="flex items-center gap-1">
-													<div className="h-2 w-2 rounded-full bg-yellow-500"></div>
+													<div className="h-2 w-2 rounded-full bg-yellow-500" />
 													{
 														event.attendees.filter(
 															(a: GoogleCalendarAttendee) =>
@@ -623,7 +623,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 								<div className="space-y-2 text-sm">
 									{event.reminders.useDefault ? (
 										<div className="flex items-center gap-2">
-											<div className="h-2 w-2 rounded-full bg-blue-500"></div>
+											<div className="h-2 w-2 rounded-full bg-blue-500" />
 											<span className="text-gray-700">
 												Default reminders (30 minutes before)
 											</span>
@@ -639,7 +639,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 																	? "bg-orange-500"
 																	: "bg-blue-500"
 															}`}
-														></div>
+														/>
 														<span className="text-gray-700">
 															{reminder.method === "popup" ? "Popup" : "Email"}{" "}
 															- {reminder.minutes} minutes before
@@ -648,7 +648,7 @@ export function EventDetailClient({ eventId }: EventDetailClientProps) {
 												),
 											) || (
 												<div className="flex items-center gap-2">
-													<div className="h-2 w-2 rounded-full bg-gray-300"></div>
+													<div className="h-2 w-2 rounded-full bg-gray-300" />
 													<span className="text-gray-500">
 														No reminders set
 													</span>

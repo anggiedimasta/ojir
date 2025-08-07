@@ -153,10 +153,9 @@ function WalletCard({
 		const colorConfig = WALLET_COLORS.find((c) => c.value === color);
 		if (isSelected) {
 			return `bg-gradient-to-br ${colorConfig?.gradient || "from-slate-800 via-slate-700 to-slate-900"}`;
-		} else {
-			// Muted version for unselected wallets - flat, matte appearance
-			return `bg-slate-500`;
 		}
+		// Muted version for unselected wallets - flat, matte appearance
+		return "bg-slate-500";
 	};
 
 	return (
@@ -169,8 +168,8 @@ function WalletCard({
 				className={`relative flex h-[200px] flex-col overflow-hidden rounded-xl p-4 text-white shadow-lg transition-all duration-300 ${getWalletGradient(wallet.color, isSelected)}`}
 			>
 				{/* Decorative circles */}
-				<div className="-translate-y-10 absolute top-0 right-0 h-20 w-20 translate-x-10 rounded-full bg-white/10"></div>
-				<div className="-translate-x-8 absolute bottom-0 left-0 h-16 w-16 translate-y-8 rounded-full bg-white/5"></div>
+				<div className="-translate-y-10 absolute top-0 right-0 h-20 w-20 translate-x-10 rounded-full bg-white/10" />
+				<div className="-translate-x-8 absolute bottom-0 left-0 h-16 w-16 translate-y-8 rounded-full bg-white/5" />
 
 				{/* Card Header */}
 				<div className="mb-4 flex items-center justify-between">
@@ -234,7 +233,7 @@ function WalletCard({
 				)}
 
 				{/* Spacer to push footer to bottom */}
-				<div className="flex-1"></div>
+				<div className="flex-1" />
 
 				{/* Card Footer - Always at bottom */}
 				<div className="flex items-center justify-between">

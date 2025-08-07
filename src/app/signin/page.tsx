@@ -152,7 +152,7 @@ export default function SignIn() {
 							<CardFooter className="flex flex-col items-center space-y-4 bg-white">
 								<div className="relative w-full">
 									<div className="absolute inset-0 flex items-center">
-										<div className="w-full border-slate-200 border-t"></div>
+										<div className="w-full border-slate-200 border-t" />
 									</div>
 									<div className="relative flex justify-center text-sm">
 										<span className="bg-white px-2 text-slate-500">

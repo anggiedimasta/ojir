@@ -26,18 +26,17 @@ export function GlobalLoadingBar() {
 			}, 200);
 
 			return () => clearInterval(interval);
-		} else {
-			// Complete the progress bar when loading finishes
-			setProgress(100);
-
-			// Hide after animation completes
-			const timeout = setTimeout(() => {
-				setIsVisible(false);
-				setProgress(0);
-			}, 300);
-
-			return () => clearTimeout(timeout);
 		}
+		// Complete the progress bar when loading finishes
+		setProgress(100);
+
+		// Hide after animation completes
+		const timeout = setTimeout(() => {
+			setIsVisible(false);
+			setProgress(0);
+		}, 300);
+
+		return () => clearTimeout(timeout);
 	}, [isLoading]);
 
 	// Update fixed elements positioning when loading bar is visible

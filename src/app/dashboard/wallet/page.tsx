@@ -106,7 +106,7 @@ export default function WalletPage() {
 						999,
 					),
 				};
-			case "current-week":
+			case "current-week": {
 				const startOfWeek = new Date(now);
 				// Get Monday (1) instead of Sunday (0)
 				const dayOfWeek = now.getDay();
@@ -117,13 +117,14 @@ export default function WalletPage() {
 				endOfWeek.setDate(startOfWeek.getDate() + 6); // Monday to Sunday (7 days)
 				endOfWeek.setHours(23, 59, 59, 999);
 				return { startDate: startOfWeek, endDate: endOfWeek };
+			}
 			case "current-day":
 				return { startDate: startOfDay, endDate: endOfDay };
 			case "custom":
 				return {
 					startDate: customStartDate ? new Date(customStartDate) : undefined,
 					endDate: customEndDate
-						? new Date(customEndDate + "T23:59:59.999")
+						? new Date(`${customEndDate}T23:59:59.999`)
 						: undefined,
 				};
 			default:
@@ -304,7 +305,7 @@ export default function WalletPage() {
 		return (
 			<div className="transform-gpu pl-72 transition-all duration-200 ease-out">
 				<div className="flex min-h-screen items-center justify-center">
-					<div className="h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2"></div>
+					<div className="h-8 w-8 animate-spin rounded-full border-blue-600 border-b-2" />
 				</div>
 			</div>
 		);
