@@ -13,6 +13,8 @@ export { GlobalLoadingBar } from "./global-loading-bar";
 export { Navbar } from "./navbar";
 export { PaginationControls } from "./pagination-controls";
 export { PaymentMethodFilter } from "./payment-method-filter";
+export { PaymentMethodDropdown } from "./payment-method-dropdown";
+export { DynamicIcon } from "./dynamic-icon";
 export { SearchInput } from "./search-input";
 export { SortControls } from "./sort-controls";
 export { SummaryCard } from "./summary-card";
@@ -23,10 +25,10 @@ export { useToast } from "./use-toast";
 export { WalletForm } from "../wallet/wallet-form";
 export { WalletList } from "../wallet/wallet-list";
 export {
-	Modal,
-	ModalHeader,
-	ModalTitle,
-	ModalDescription,
-	ModalCloseButton,
-	ModalFooter,
+  Modal,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalCloseButton,
+  ModalFooter,
 } from "./modal";

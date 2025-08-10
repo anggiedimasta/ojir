@@ -43,6 +43,13 @@
       "when": 1754584097466,
       "tag": "0005_white_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1754840389706,
+      "tag": "0006_lame_gambit",
+      "breakpoints": true
     }
   ]
 }

@@ -8,15 +8,15 @@ export type CalendarView = "month" | "week" | "day";
 
 // Component-specific types for calendar views
 export interface CalendarViewProps {
-	currentDate: Date;
-	events: CalendarEvent[];
-	onDateChange: (date: Date) => void;
-	onEventClick?: (event: CalendarEvent) => void;
+  currentDate: Date;
+  events: CalendarEvent[];
+  onDateChange: (date: Date) => void;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
 export interface CalendarEventDisplayProps {
-	event: CalendarEvent;
-	compact?: boolean;
-	showTime?: boolean;
-	onClick?: () => void;
+  event: CalendarEvent;
+  compact?: boolean;
+  showTime?: boolean;
+  onClick?: () => void;
 }

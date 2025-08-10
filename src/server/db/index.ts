@@ -9,7 +9,7 @@ import * as schema from "./schema";
  * update.
  */
 const globalForDb = globalThis as unknown as {
-	sql: ReturnType<typeof neon> | undefined;
+  sql: ReturnType<typeof neon> | undefined;
 };
 
 const sql = globalForDb.sql ?? neon(env.DATABASE_URL);
