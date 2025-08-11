@@ -204,6 +204,7 @@ export interface TransactionResponse {
   subcategoryName: string | null;
   subcategoryIcon: string | null;
   subcategoryColor: string | null;
+  subcategoryColorIntensity: number | null;
   // Wallet information
   walletName: string | null;
   walletType: string | null;

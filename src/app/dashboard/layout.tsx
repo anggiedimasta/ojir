@@ -40,9 +40,7 @@ export default async function DashboardLayout({
         <div className="flex-1">
           <Navbar user={session.user} />
 
-          <main className="mt-20">
-            <div className="p-4 sm:p-6 lg:p-8">{children}</div>
-          </main>
+          <main className="mt-20">{children}</main>
         </div>
       </div>
     </div>

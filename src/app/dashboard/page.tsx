@@ -9,5 +9,5 @@ export default async function DashboardPage() {
     redirect("/signin");
   }
 
-  return <DashboardContent user={session.user} />;
+  return <DashboardContent session={session} />;
 }

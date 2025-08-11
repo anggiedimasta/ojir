@@ -415,7 +415,7 @@ export const categories = createTable(
       .$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 255 }).notNull(),
     icon: varchar("icon", { length: 50 }),
-    color: varchar("color", { length: 7 }).notNull(), // hex color
+    color: varchar("color", { length: 20 }).notNull(), // Tailwind color name (e.g., "blue", "red", "green")
     userId: varchar("user_id", { length: 255 })
       .notNull()
       .references(() => authUsers.id, { onDelete: "cascade" }),
@@ -441,7 +441,9 @@ export const subcategories = createTable(
       .$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 255 }).notNull(),
     icon: varchar("icon", { length: 50 }),
-    color: varchar("color", { length: 7 }).notNull(), // hex color
+    color: varchar("color", { length: 20 }).notNull(), // Tailwind color name (e.g., "blue", "red", "green")
+    colorIntensity: integer("color_intensity").notNull().default(100), // Tailwind color intensity (100, 200, 300, etc.)
+    position: integer("position").notNull().default(0), // Position for sorting subcategories
     categoryId: varchar("category_id", { length: 255 })
       .notNull()
       .references(() => categories.id, { onDelete: "cascade" }),

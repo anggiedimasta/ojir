@@ -1,35 +1,101 @@
 "use client";
 
-import { BarChart3, Calendar, FileText, Users } from "lucide-react";
+import {
+  BarChart3,
+  Calendar,
+  CreditCard,
+  FileText,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import type { Session } from "next-auth";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import {
+  CategoryDistributionChart,
+  IncomeVsExpensesChart,
+  SpendingTrendChart,
+  WalletBalanceChart,
+} from "~/components/charts";
+import { useChartData } from "~/hooks/use-chart-data";
 import { useSidebarStoreHydrated } from "../../../store/sidebar-store";
 
-// Lazy load charts
-const LazyAreaChart = dynamic(
-  () => import("@tremor/react").then((mod) => mod.AreaChart),
+// Lazy load charts for better performance
+const LazySpendingTrendChart = dynamic(
+  () =>
+    import("~/components/charts").then((mod) => ({
+      default: mod.SpendingTrendChart,
+    })),
   { ssr: false },
-);
-const LazyBarChart = dynamic(
-  () => import("@tremor/react").then((mod) => mod.BarChart),
+) as React.ComponentType<{
+  data: Array<{
+    period: string;
+    income: number;
+    expenses: number;
+    netIncome: number;
+  }>;
+  title?: string;
+  className?: string;
+}>;
+
+const LazyCategoryDistributionChart = dynamic(
+  () =>
+    import("~/components/charts").then((mod) => ({
+      default: mod.CategoryDistributionChart,
+    })),
   { ssr: false },
-);
-const LazyDonutChart = dynamic(
-  () => import("@tremor/react").then((mod) => mod.DonutChart),
+) as React.ComponentType<{
+  data: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  title?: string;
+  className?: string;
+}>;
+
+const LazyIncomeVsExpensesChart = dynamic(
+  () =>
+    import("~/components/charts").then((mod) => ({
+      default: mod.IncomeVsExpensesChart,
+    })),
   { ssr: false },
-);
-const LazyLineChart = dynamic(
-  () => import("@tremor/react").then((mod) => mod.LineChart),
+) as React.ComponentType<{
+  data: Array<{
+    period: string;
+    income: number;
+    expenses: number;
+    netIncome: number;
+  }>;
+  title?: string;
+  className?: string;
+}>;
+
+const LazyWalletBalanceChart = dynamic(
+  () =>
+    import("~/components/charts").then((mod) => ({
+      default: mod.WalletBalanceChart,
+    })),
   { ssr: false },
-);
+) as React.ComponentType<{
+  data: Array<{
+    date: string;
+    balance: number;
+    change: number;
+  }>;
+  title?: string;
+  className?: string;
+}>;
 
 interface Stat {
-  name: string;
+  title: string;
   value: string;
-  icon: React.ReactNode;
-  bgColor: string;
-  textColor: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  change: string;
+  changeType: "positive" | "negative";
 }
 
 interface Activity {
@@ -46,303 +112,410 @@ interface QuickAction {
 }
 
 interface DashboardContentProps {
-  user: Session["user"];
+  session: Session;
 }
 
-const revenueData = [
-  { date: "Jan 23", Revenue: 2890 },
-  { date: "Feb 23", Revenue: 1890 },
-  { date: "Mar 23", Revenue: 3890 },
-  { date: "Apr 23", Revenue: 3490 },
-  { date: "May 23", Revenue: 2490 },
-  { date: "Jun 23", Revenue: 4490 },
-];
-
-const transactionData = [
-  { month: "Jan", Transactions: 289 },
-  { month: "Feb", Transactions: 189 },
-  { month: "Mar", Transactions: 389 },
-  { month: "Apr", Transactions: 349 },
-  { month: "May", Transactions: 249 },
-  { month: "Jun", Transactions: 449 },
-];
-
-const expenseData = [
-  { name: "Food & Dining", value: 35 },
-  { name: "Shopping", value: 25 },
-  { name: "Transportation", value: 20 },
-  { name: "Entertainment", value: 15 },
-  { name: "Bills & Utilities", value: 5 },
-];
-
-const engagementData = [
-  { month: "Jan", "This Month": 85, "Last Month": 75 },
-  { month: "Feb", "This Month": 90, "Last Month": 80 },
-  { month: "Mar", "This Month": 75, "Last Month": 65 },
-  { month: "Apr", "This Month": 95, "Last Month": 85 },
-  { month: "May", "This Month": 80, "Last Month": 70 },
-  { month: "Jun", "This Month": 88, "Last Month": 78 },
-];
-
-export function DashboardContent({ user }: DashboardContentProps) {
+export function DashboardContent({ session }: DashboardContentProps) {
   const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
-  const [hasMounted, setHasMounted] = useState(false);
-  const [isChartsVisible, setIsChartsVisible] = useState(false);
+  const {
+    spendingTrend,
+    categoryDistribution,
+    walletBalanceHistory,
+    walletSummary,
+    isLoading,
+    hasErrors,
+  } = useChartData();
 
-  useEffect(() => {
-    setHasMounted(true);
-    // Delay loading charts until after initial render
-    const timer = setTimeout(() => {
-      setIsChartsVisible(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
+  // Transform real data for charts
+  const spendingTrendData = spendingTrend.map((item) => ({
+    period: item.period,
+    income: item.income,
+    expenses: item.expenses,
+    netIncome: item.income - item.expenses,
+  }));
 
-  if (!hasMounted || !hasHydrated) return null;
+  const categoryData = categoryDistribution.map((item) => ({
+    name: item.name,
+    value: item.amount,
+    color: item.color,
+  }));
 
-  const stats: Stat[] = [
+  const cashFlowData = spendingTrend.map((item) => ({
+    period: item.period,
+    income: item.income,
+    expenses: item.expenses,
+    netIncome: item.income - item.expenses,
+  }));
+
+  const balanceData = walletBalanceHistory.map((item, index, array) => ({
+    date: item.period,
+    balance: item.balance || 0,
+    change:
+      index > 0 ? (item.balance || 0) - (array[index - 1]?.balance || 0) : 0,
+  }));
+
+  // Calculate stats from real data
+  const totalBalance = walletSummary?.totalIncome
+    ? walletSummary.totalIncome - walletSummary.totalExpense
+    : 0;
+
+  const monthlyIncome =
+    spendingTrend.length > 0
+      ? spendingTrend[spendingTrend.length - 1]?.income || 0
+      : 0;
+
+  const monthlyExpenses =
+    spendingTrend.length > 0
+      ? spendingTrend[spendingTrend.length - 1]?.expenses || 0
+      : 0;
+
+  const transactionCount = walletSummary?.transactionCount || 0;
+
+  const stats = [
     {
-      name: "Total Projects",
-      value: "12",
-      icon: <FileText className="h-6 w-6 text-blue-500" />,
-      bgColor: "bg-blue-50",
-      textColor: "text-blue-600",
+      title: "Total Balance",
+      value: new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(totalBalance),
+      description: "Current total balance across all wallets",
+      icon: Wallet,
+      change: "+12.5%",
+      changeType: "positive" as const,
     },
     {
-      name: "Team Members",
-      value: "24",
-      icon: <Users className="h-6 w-6 text-purple-500" />,
-      bgColor: "bg-purple-50",
-      textColor: "text-purple-600",
+      title: "Monthly Income",
+      value: new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(monthlyIncome),
+      description: "Total income this month",
+      icon: TrendingUp,
+      change: "+8.2%",
+      changeType: "positive" as const,
     },
     {
-      name: "Upcoming Events",
-      value: "8",
-      icon: <Calendar className="h-6 w-6 text-rose-500" />,
-      bgColor: "bg-rose-50",
-      textColor: "text-rose-600",
+      title: "Monthly Expenses",
+      value: new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(monthlyExpenses),
+      description: "Total expenses this month",
+      icon: TrendingDown,
+      change: "-2.1%",
+      changeType: "negative" as const,
     },
     {
-      name: "Analytics",
-      value: "92%",
-      icon: <BarChart3 className="h-6 w-6 text-emerald-500" />,
-      bgColor: "bg-emerald-50",
-      textColor: "text-emerald-600",
+      title: "Transactions",
+      value: transactionCount.toString(),
+      description: "Total transactions this month",
+      icon: FileText,
+      change: "+15.3%",
+      changeType: "positive" as const,
     },
   ];
 
   const recentActivity: Activity[] = [
     {
       id: "1",
-      title: "New Project Created",
-      description: "Project 'Website Redesign' was created",
+      title: "New Transaction",
+      description: "Payment received from Client ABC",
       time: "2 hours ago",
-      icon: <FileText className="h-5 w-5 text-slate-600" />,
+      icon: <CreditCard className="h-5 w-5 text-slate-600" />,
     },
     {
       id: "2",
-      title: "Team Meeting",
-      description: "Scheduled for tomorrow at 10:00 AM",
+      title: "Expense Recorded",
+      description: "Grocery shopping at Supermarket XYZ",
       time: "4 hours ago",
-      icon: <Calendar className="h-5 w-5 text-slate-600" />,
+      icon: <TrendingDown className="h-5 w-5 text-slate-600" />,
     },
     {
       id: "3",
-      title: "New Team Member",
-      description: "John Doe joined the team",
+      title: "Income Received",
+      description: "Salary payment for June 2024",
       time: "1 day ago",
-      icon: <Users className="h-5 w-5 text-slate-600" />,
+      icon: <TrendingUp className="h-5 w-5 text-slate-600" />,
     },
   ];
 
   const quickActions: QuickAction[] = [
     {
-      name: "New Project",
-      icon: <FileText className="h-5 w-5 text-slate-600" />,
-    },
-    {
-      name: "Schedule Meeting",
-      icon: <Calendar className="h-5 w-5 text-slate-600" />,
-    },
-    {
-      name: "Add Member",
-      icon: <Users className="h-5 w-5 text-slate-600" />,
+      name: "Add Transaction",
+      icon: <CreditCard className="h-5 w-5 text-slate-600" />,
     },
     {
       name: "View Reports",
       icon: <BarChart3 className="h-5 w-5 text-slate-600" />,
     },
+    {
+      name: "Manage Wallets",
+      icon: <Wallet className="h-5 w-5 text-slate-600" />,
+    },
+    {
+      name: "Set Budget",
+      icon: <Calendar className="h-5 w-5 text-slate-600" />,
+    },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasErrors) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <p className="mb-4 text-destructive">Error loading dashboard data</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`transform-gpu transition-all duration-200 ease-out ${isCollapsed ? "pl-20" : "pl-72"}`}
+      className={`flex-1 space-y-6 p-4 pt-6 md:p-8 ${isCollapsed ? "ml-20" : "ml-72"} transition-all duration-200 ease-out`}
     >
-      <div className="mx-auto p-4 sm:p-6 lg:p-8">
-        <div
-          className="grid grid-cols-1 gap-6"
-          style={{ contain: "layout", willChange: "transform" }}
-        >
-          {/* Welcome Card */}
-          <div className="col-span-1">
-            <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-semibold text-2xl text-slate-900">
-                    Welcome back, {user.name}!
-                  </h2>
-                  <p className="mt-2 text-slate-600">
-                    Here's what's happening with your projects today.
-                  </p>
-                </div>
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="font-bold text-3xl tracking-tight">Dashboard</h2>
+        <div className="flex items-center space-x-2">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground text-sm">
+            {new Date().toLocaleDateString("id-ID", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </span>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.title}
+            className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+          >
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-100/50 via-transparent to-slate-100/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="font-medium text-slate-700 text-sm tracking-tight">
+                {stat.title}
+              </h3>
+              <div className="rounded-lg bg-slate-100/80 p-2 backdrop-blur-sm">
+                <stat.icon className="h-4 w-4 text-slate-600" />
+              </div>
+            </div>
+            <div className="relative z-10 pt-0">
+              <div className="font-bold text-2xl text-slate-900">
+                {stat.value}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {stat.description}
+              </p>
+              <div className="mt-2 flex items-center space-x-1">
+                <span
+                  className={`font-medium text-xs ${
+                    stat.changeType === "positive"
+                      ? "text-emerald-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {stat.change}
+                </span>
+                <span className="text-slate-500 text-xs">from last month</span>
               </div>
             </div>
           </div>
+        ))}
+      </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat) => (
-              <div
-                key={stat.name}
-                className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm"
-              >
-                <div className="flex items-center">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-lg ${stat.bgColor}`}
-                  >
-                    {stat.icon}
-                  </div>
-                  <div className="ml-4">
-                    <p className="font-medium text-slate-600 text-sm">
-                      {stat.name}
-                    </p>
-                    <p className={`font-semibold text-2xl ${stat.textColor}`}>
-                      {stat.value}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* Charts Grid */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        {/* Spending Trend Chart */}
+        <div className="col-span-4">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
+                Spending Trends
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Monthly income vs expenses
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <LazySpendingTrendChart
+                data={spendingTrendData}
+                title="Spending Trends"
+                className="h-[300px]"
+              />
+            </div>
           </div>
+        </div>
 
-          {/* Charts - Only render when visible */}
-          {isChartsVisible && (
-            <>
-              {/* Revenue Chart */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-                  <h3 className="font-medium text-lg text-slate-900">
-                    Revenue Overview
-                  </h3>
-                  <LazyAreaChart
-                    className="mt-4 h-72"
-                    data={revenueData}
-                    index="date"
-                    categories={["Revenue"]}
-                    colors={["blue"]}
-                    valueFormatter={(number: number) =>
-                      `$${number.toLocaleString()}`
-                    }
-                  />
-                </div>
-              </div>
+        {/* Category Distribution Chart */}
+        <div className="col-span-3">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-transparent to-teal-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-              {/* Monthly Transactions */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-                  <h3 className="font-medium text-lg text-slate-900">
-                    Monthly Transactions
-                  </h3>
-                  <LazyBarChart
-                    className="mt-4 h-72"
-                    data={transactionData}
-                    index="month"
-                    categories={["Transactions"]}
-                    colors={["purple"]}
-                  />
-                </div>
-              </div>
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
+                Category Breakdown
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Where your money goes
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <LazyCategoryDistributionChart
+                data={categoryData}
+                title="Category Distribution"
+                className="h-[300px]"
+              />
+            </div>
+          </div>
+        </div>
 
-              {/* Expense Categories */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-                  <h3 className="font-medium text-lg text-slate-900">
-                    Expense Categories
-                  </h3>
-                  <LazyDonutChart
-                    className="mt-4 h-72"
-                    data={expenseData}
-                    category="value"
-                    index="name"
-                    colors={["blue", "purple", "rose", "emerald", "amber"]}
-                    valueFormatter={(number: number) => `${number}%`}
-                  />
-                </div>
-              </div>
+        {/* Income vs Expenses Chart */}
+        <div className="col-span-4">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 via-transparent to-orange-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-              {/* User Engagement */}
-              <div className="col-span-1">
-                <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-                  <h3 className="font-medium text-lg text-slate-900">
-                    User Engagement Metrics
-                  </h3>
-                  <LazyLineChart
-                    className="mt-4 h-72"
-                    data={engagementData}
-                    index="month"
-                    categories={["This Month", "Last Month"]}
-                    colors={["blue", "purple"]}
-                    valueFormatter={(number: number) => `${number}%`}
-                  />
-                </div>
-              </div>
-            </>
-          )}
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
+                Cash Flow
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Income vs expenses comparison
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <LazyIncomeVsExpensesChart
+                data={cashFlowData}
+                title="Cash Flow"
+                className="h-[300px]"
+              />
+            </div>
+          </div>
+        </div>
 
-          {/* Recent Activity */}
-          <div className="col-span-1">
-            <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-              <h3 className="font-medium text-lg text-slate-900">
+        {/* Wallet Balance Chart */}
+        <div className="col-span-3">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-transparent to-pink-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
+                Balance History
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Wallet balance over time
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <LazyWalletBalanceChart
+                data={balanceData}
+                title="Balance History"
+                className="h-[300px]"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity & Quick Actions */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+        <div className="col-span-4">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-50/50 via-transparent to-pink-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
                 Recent Activity
               </h3>
-              <div className="mt-4 space-y-4">
+              <p className="text-muted-foreground text-sm">
+                Latest transactions and updates
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <div className="space-y-4">
                 {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50">
+                  <div
+                    key={activity.id}
+                    className="flex items-center space-x-4 rounded-lg p-3 transition-colors hover:bg-slate-50/80"
+                  >
+                    <div className="rounded-full bg-gradient-to-br from-rose-100 to-pink-100 p-2 shadow-sm">
                       {activity.icon}
                     </div>
-                    <div className="ml-4">
-                      <p className="font-medium text-slate-900 text-sm">
+                    <div className="flex-1 space-y-1">
+                      <p className="font-medium text-slate-800 text-sm leading-none">
                         {activity.title}
                       </p>
-                      <p className="text-slate-600 text-sm">
+                      <p className="text-muted-foreground text-sm">
                         {activity.description}
                       </p>
-                      <p className="mt-1 text-slate-500 text-xs">
-                        {activity.time}
-                      </p>
+                    </div>
+                    <div className="text-muted-foreground text-sm">
+                      {activity.time}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Quick Actions */}
-          <div className="col-span-1">
-            <div className="rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm">
-              <h3 className="font-medium text-lg text-slate-900">
+        <div className="col-span-3">
+          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
+            {/* Subtle background pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-50/50 via-transparent to-blue-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+            <div className="relative z-10">
+              <h3 className="font-semibold text-lg text-slate-800">
                 Quick Actions
               </h3>
-              <div className="mt-4 grid grid-cols-2 gap-4">
+              <p className="text-muted-foreground text-sm">
+                Common tasks and shortcuts
+              </p>
+            </div>
+            <div className="relative z-10 pt-4">
+              <div className="space-y-3">
                 {quickActions.map((action) => (
                   <button
-                    type="button"
                     key={action.name}
-                    className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-3 font-medium text-slate-900 text-sm hover:bg-slate-50"
+                    type="button"
+                    className="group/action flex w-full cursor-pointer items-center space-x-3 rounded-lg border-0 bg-gradient-to-r from-slate-50 to-slate-100/80 p-3 text-left transition-all duration-200 hover:scale-[1.02] hover:from-slate-100 hover:to-slate-200 hover:shadow-md"
                   >
-                    {action.icon}
-                    <span className="ml-2">{action.name}</span>
+                    <div className="rounded-lg bg-white/80 p-2 shadow-sm transition-all duration-200 group-hover/action:shadow-md">
+                      {action.icon}
+                    </div>
+                    <span className="font-medium text-slate-700 text-sm group-hover/action:text-slate-900">
+                      {action.name}
+                    </span>
                   </button>
                 ))}
               </div>

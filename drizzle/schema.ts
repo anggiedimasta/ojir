@@ -12,6 +12,17 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+export const user = pgTable("user", {
+  id: varchar({ length: 255 }).primaryKey().notNull(),
+  name: varchar({ length: 255 }),
+  email: varchar({ length: 255 }).notNull().unique(),
+  emailVerified: timestamp("email_verified", {
+    withTimezone: true,
+    mode: "string",
+  }),
+  image: varchar({ length: 255 }),
+});
+
 export const ojirPaymentMethod = pgTable("ojir_payment_method", {
   code: varchar({ length: 50 }).primaryKey().notNull(),
   name: varchar({ length: 255 }).notNull(),
@@ -27,7 +38,7 @@ export const ojirWallet = pgTable(
   "ojir_wallet",
   {
     id: varchar({ length: 255 })
-      .default(gen_random_uuid())
+      .default(sql`gen_random_uuid()`)
       .primaryKey()
       .notNull(),
     userId: varchar("user_id", { length: 255 }).notNull(),
@@ -80,7 +91,7 @@ export const ojirTransaction = pgTable(
   "ojir_transaction",
   {
     id: varchar({ length: 255 })
-      .default(gen_random_uuid())
+      .default(sql`gen_random_uuid()`)
       .primaryKey()
       .notNull(),
     userId: varchar("user_id", { length: 255 }).notNull(),
@@ -187,7 +198,7 @@ export const ojirBank = pgTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }),
-    id: varchar({ length: 255 }).default(gen_random_uuid()),
+    id: varchar({ length: 255 }).default(sql`gen_random_uuid()`),
     displayName: varchar("display_name", { length: 255 }).default("").notNull(),
     iconPath: varchar("icon_path", { length: 500 }),
     sortOrder: integer("sort_order").default(0).notNull(),
@@ -209,7 +220,7 @@ export const ojirCalendarEvent = pgTable(
   "ojir_calendar_event",
   {
     id: varchar({ length: 255 })
-      .default(gen_random_uuid())
+      .default(sql`gen_random_uuid()`)
       .primaryKey()
       .notNull(),
     userId: varchar("user_id", { length: 255 }).notNull(),
@@ -283,7 +294,7 @@ export const ojirCategory = pgTable(
     id: varchar({ length: 255 }).primaryKey().notNull(),
     name: varchar({ length: 255 }).notNull(),
     icon: varchar({ length: 50 }),
-    color: varchar({ length: 7 }).notNull(),
+    color: varchar({ length: 20 }).notNull(), // Tailwind color name (e.g., "blue", "red", "green")
     userId: varchar("user_id", { length: 255 }).notNull(),
     isDefault: boolean("is_default").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
@@ -305,7 +316,8 @@ export const ojirSubcategory = pgTable(
     id: varchar({ length: 255 }).primaryKey().notNull(),
     name: varchar({ length: 255 }).notNull(),
     icon: varchar({ length: 50 }),
-    color: varchar({ length: 7 }).notNull(),
+    color: varchar({ length: 20 }).notNull(), // Tailwind color name (e.g., "blue", "red", "green")
+    colorIntensity: integer("color_intensity").notNull().default(100), // Tailwind color intensity (100, 200, 300, etc.)
     categoryId: varchar("category_id", { length: 255 }).notNull(),
     userId: varchar("user_id", { length: 255 }).notNull(),
     isDefault: boolean("is_default").default(false).notNull(),

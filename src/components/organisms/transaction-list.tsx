@@ -5,8 +5,8 @@ import { Button } from "../atoms/button";
 import { Card } from "../atoms/card";
 import { Icon } from "../atoms/icon";
 import { EmptyState } from "../molecules/empty-state";
+import { TransactionItem } from "../ui/transaction-item";
 import { PaginationControls } from "./pagination-controls";
-import { TransactionItem } from "./transaction-item";
 
 interface TransactionListProps {
   transactions: TransactionResponse[] | undefined;

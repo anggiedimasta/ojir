@@ -8,7 +8,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 const createCategorySchema = z.object({
   name: z.string().min(1, "Category name is required"),
   icon: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
+  color: z.string().min(1, "Color is required"), // Tailwind color name
 });
 
 const updateCategorySchema = createCategorySchema.partial();
@@ -16,7 +16,8 @@ const updateCategorySchema = createCategorySchema.partial();
 const createSubcategorySchema = z.object({
   name: z.string().min(1, "Subcategory name is required"),
   icon: z.string().optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, "Invalid color format"),
+  color: z.string().min(1, "Color is required"), // Tailwind color name
+  colorIntensity: z.number().min(50).max(900).default(100), // Tailwind color intensity
   categoryId: z.string().min(1, "Category ID is required"),
 });
 

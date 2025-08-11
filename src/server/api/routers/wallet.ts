@@ -576,6 +576,7 @@ export const walletRouter = createTRPCRouter({
           subcategoryName: subcategories.name,
           subcategoryIcon: subcategories.icon,
           subcategoryColor: subcategories.color,
+          subcategoryColorIntensity: subcategories.colorIntensity,
           // Wallet information
           walletName: wallets.name,
           walletType: wallets.type,
@@ -837,6 +838,364 @@ export const walletRouter = createTRPCRouter({
       };
 
       return summary;
+    }),
+
+  // Get spending trend data for charts
+  getSpendingTrend: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
+        groupBy: z.enum(["day", "week", "month"]).default("month"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL<unknown>[] = [
+        eq(transactions.userId, ctx.session.user.id),
+      ];
+
+      if (input.startDate) {
+        conditions.push(gte(transactions.transactionDate, input.startDate));
+      }
+      if (input.endDate) {
+        conditions.push(lte(transactions.transactionDate, input.endDate));
+      }
+      if (input.walletId) {
+        conditions.push(eq(transactions.walletId, input.walletId));
+      } else if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      }
+
+      const userTransactions = await ctx.db
+        .select({
+          totalAmount: transactions.totalAmount,
+          direction: transactions.direction,
+          transactionDate: transactions.transactionDate,
+        })
+        .from(transactions)
+        .where(and(...conditions))
+        .orderBy(asc(transactions.transactionDate));
+
+      const trendData = new Map<string, { income: number; expenses: number }>();
+
+      for (const transaction of userTransactions) {
+        if (!transaction.transactionDate || !transaction.direction) continue;
+
+        const date = new Date(transaction.transactionDate);
+        let key: string;
+
+        if (input.groupBy === "day") {
+          const dayKey = date.toISOString().split("T")[0];
+          key =
+            dayKey ||
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        } else if (input.groupBy === "week") {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split("T")[0];
+          key =
+            weekKey ||
+            `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+        } else {
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        }
+
+        const existing = trendData.get(key) || { income: 0, expenses: 0 };
+        const totalAmount = Number.parseFloat(transaction.totalAmount || "0");
+
+        if (transaction.direction === "in") {
+          existing.income += totalAmount;
+        } else {
+          existing.expenses += totalAmount;
+        }
+
+        trendData.set(key, existing);
+      }
+
+      return Array.from(trendData.entries())
+        .map(([period, data]) => ({
+          period,
+          income: data.income,
+          expenses: data.expenses,
+        }))
+        .sort((a, b) => a.period.localeCompare(b.period));
+    }),
+
+  // Get category distribution data for charts
+  getCategoryDistribution: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL<unknown>[] = [
+        eq(transactions.userId, ctx.session.user.id),
+        eq(transactions.direction, "out"), // Only expenses for category analysis
+      ];
+
+      if (input.startDate) {
+        conditions.push(gte(transactions.transactionDate, input.startDate));
+      }
+      if (input.endDate) {
+        conditions.push(lte(transactions.transactionDate, input.endDate));
+      }
+      if (input.walletId) {
+        conditions.push(eq(transactions.walletId, input.walletId));
+      } else if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      }
+
+      const userTransactions = await ctx.db
+        .select({
+          totalAmount: transactions.totalAmount,
+          categoryId: transactions.categoryId,
+          category: categories.name,
+          categoryColor: categories.color,
+          categoryIcon: categories.icon,
+        })
+        .from(transactions)
+        .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .where(and(...conditions));
+
+      const categoryTotals = new Map<
+        string,
+        { name: string; amount: number; color: string; icon: string | null }
+      >();
+
+      for (const transaction of userTransactions) {
+        const categoryName = transaction.category || "Uncategorized";
+        const categoryColor = transaction.categoryColor || "#8884d8";
+        const categoryIcon = transaction.categoryIcon || null;
+        const totalAmount = Number.parseFloat(transaction.totalAmount || "0");
+
+        const existing = categoryTotals.get(categoryName) || {
+          name: categoryName,
+          amount: 0,
+          color: categoryColor,
+          icon: categoryIcon,
+        };
+
+        existing.amount += totalAmount;
+        categoryTotals.set(categoryName, existing);
+      }
+
+      return Array.from(categoryTotals.values()).sort(
+        (a, b) => b.amount - a.amount,
+      );
+    }),
+
+  // Get payment method distribution data for charts
+  getPaymentMethodDistribution: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL<unknown>[] = [
+        eq(transactions.userId, ctx.session.user.id),
+      ];
+
+      if (input.startDate) {
+        conditions.push(gte(transactions.transactionDate, input.startDate));
+      }
+      if (input.endDate) {
+        conditions.push(lte(transactions.transactionDate, input.endDate));
+      }
+      if (input.walletId) {
+        conditions.push(eq(transactions.walletId, input.walletId));
+      } else if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      }
+
+      const userTransactions = await ctx.db
+        .select({
+          totalAmount: transactions.totalAmount,
+          bankCode: transactions.recipientBank,
+          bankName: banks.name,
+          bankIcon: banks.iconPath,
+        })
+        .from(transactions)
+        .leftJoin(banks, eq(transactions.recipientBank, banks.code))
+        .where(and(...conditions));
+
+      const methodTotals = new Map<
+        string,
+        { name: string; amount: number; icon: string | null }
+      >();
+
+      for (const transaction of userTransactions) {
+        const methodName =
+          transaction.bankName || transaction.bankCode || "Unknown";
+        const methodIcon = transaction.bankIcon || null;
+        const totalAmount = Number.parseFloat(transaction.totalAmount || "0");
+
+        const existing = methodTotals.get(methodName) || {
+          name: methodName,
+          amount: 0,
+          icon: methodIcon,
+        };
+
+        existing.amount += totalAmount;
+        methodTotals.set(methodName, existing);
+      }
+
+      return Array.from(methodTotals.values()).sort(
+        (a, b) => b.amount - a.amount,
+      );
+    }),
+
+  // Get wallet balance history for charts
+  getWalletBalanceHistory: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
+        groupBy: z.enum(["day", "week", "month"]).default("month"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL<unknown>[] = [
+        eq(transactions.userId, ctx.session.user.id),
+      ];
+
+      if (input.startDate) {
+        conditions.push(gte(transactions.transactionDate, input.startDate));
+      }
+      if (input.endDate) {
+        conditions.push(lte(transactions.transactionDate, input.endDate));
+      }
+      if (input.walletId) {
+        conditions.push(eq(transactions.walletId, input.walletId));
+      } else if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      }
+
+      const userTransactions = await ctx.db
+        .select({
+          totalAmount: transactions.totalAmount,
+          direction: transactions.direction,
+          transactionDate: transactions.transactionDate,
+        })
+        .from(transactions)
+        .where(and(...conditions))
+        .orderBy(asc(transactions.transactionDate));
+
+      const balanceHistory = new Map<string, number>();
+      let runningBalance = 0;
+
+      for (const transaction of userTransactions) {
+        const date = new Date(transaction.transactionDate);
+        let key: string;
+
+        if (input.groupBy === "day") {
+          const dayKey = date.toISOString().split("T")[0];
+          key =
+            dayKey ||
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        } else if (input.groupBy === "week") {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          const weekKey = weekStart.toISOString().split("T")[0];
+          key =
+            weekKey ||
+            `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
+        } else {
+          key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        }
+
+        const totalAmount = Number.parseFloat(transaction.totalAmount || "0");
+        if (transaction.direction === "in") {
+          runningBalance += totalAmount;
+        } else {
+          runningBalance -= totalAmount;
+        }
+
+        balanceHistory.set(key, runningBalance);
+      }
+
+      return Array.from(balanceHistory.entries())
+        .map(([period, balance]) => ({
+          period,
+          balance,
+        }))
+        .sort((a, b) => a.period.localeCompare(b.period));
+    }),
+
+  // Get transaction type breakdown for charts
+  getTransactionTypeBreakdown: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.date().optional(),
+        endDate: z.date().optional(),
+        walletId: z.string().optional(),
+        walletIds: z.array(z.string()).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conditions: SQL<unknown>[] = [
+        eq(transactions.userId, ctx.session.user.id),
+      ];
+
+      if (input.startDate) {
+        conditions.push(gte(transactions.transactionDate, input.startDate));
+      }
+      if (input.endDate) {
+        conditions.push(lte(transactions.transactionDate, input.endDate));
+      }
+      if (input.walletId) {
+        conditions.push(eq(transactions.walletId, input.walletId));
+      } else if (input.walletIds && input.walletIds.length > 0) {
+        conditions.push(inArray(transactions.walletId, input.walletIds));
+      }
+
+      const userTransactions = await ctx.db
+        .select({
+          totalAmount: transactions.totalAmount,
+          transactionType: transactions.transactionType,
+          direction: transactions.direction,
+        })
+        .from(transactions)
+        .where(and(...conditions));
+
+      const typeTotals = new Map<
+        string,
+        { type: string; income: number; expenses: number }
+      >();
+
+      for (const transaction of userTransactions) {
+        const type = transaction.transactionType || "Unknown";
+        const totalAmount = Number.parseFloat(transaction.totalAmount || "0");
+
+        const existing = typeTotals.get(type) || {
+          type,
+          income: 0,
+          expenses: 0,
+        };
+
+        if (transaction.direction === "in") {
+          existing.income += totalAmount;
+        } else {
+          existing.expenses += totalAmount;
+        }
+
+        typeTotals.set(type, existing);
+      }
+
+      return Array.from(typeTotals.values()).sort(
+        (a, b) => b.income + b.expenses - (a.income + a.expenses),
+      );
     }),
 
   // Sync transactions from Gmail

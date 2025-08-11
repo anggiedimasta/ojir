@@ -1,175 +1,52 @@
 "use client";
 
-import {
-  Activity,
-  AlertTriangle,
-  Baby,
-  Backpack,
-  BarChart3,
-  Beer,
-  Bike,
-  BookOpen,
-  Brain,
-  Briefcase,
-  Building,
-  Bus,
-  Car,
-  ChefHat,
-  Clock,
-  Cloud,
-  Coffee,
-  Dice1,
-  DollarSign,
-  Droplets,
-  Dumbbell,
-  FerrisWheel,
-  FileText,
-  Film,
-  Fuel,
-  Gamepad2,
-  Gem,
-  Gift,
-  Glasses,
-  Globe,
-  GraduationCap,
-  Hamburger,
-  Hammer,
-  Headphones,
-  Heart,
-  Home,
-  Image,
-  Landmark,
-  Leaf,
-  Lightbulb,
-  Lock,
-  Megaphone,
-  Monitor,
-  Music,
-  Newspaper,
-  Package,
-  Palette,
-  Paperclip,
-  ParkingCircle,
-  PartyPopper,
-  PawPrint,
-  Pill,
-  Plane,
-  RotateCcw,
-  Scale,
-  Scissors,
-  Shield,
-  Shirt,
-  ShoppingBag,
-  ShoppingCart,
-  Smartphone,
-  Sofa,
-  Sparkles,
-  Sprout,
-  Stethoscope,
-  Tag,
-  TestTube,
-  TrendingUp,
-  Trophy,
-  Truck,
-  User,
-  UserCheck,
-  Users,
-  Utensils,
-  Wrench,
-  Zap,
-} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import { useState } from "react";
 import { DashboardPageLayout } from "~/components/templates";
 import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { CategoryPill } from "~/components/ui/category-pill";
 import { CategorySelector } from "~/components/wallet/category-selector";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+
+// Helper function to get Tailwind color classes
+const getTailwindColorClasses = (color: string, colorIntensity: number) => {
+  const normalizedColor = color.toLowerCase();
+  const intensity = Math.max(50, Math.min(950, colorIntensity));
+
+  return {
+    background: `bg-${normalizedColor}-${intensity}`,
+    text: `text-${normalizedColor}-${Math.min(intensity + 400, 900)}`,
+    border: `border-${normalizedColor}-${Math.min(intensity + 100, 900)}`,
+  };
+};
+
+// Lazy-loaded icon map - only import icons when first accessed
+const iconMap = new Map<string, React.ComponentType<{ className?: string }>>();
 
 // Helper function to get Lucide icon component by name
 const getIconComponent = (iconName: string) => {
-  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Tag,
-    Home,
-    Utensils,
-    Car,
-    ShoppingBag,
-    Heart,
-    GraduationCap,
-    Film,
-    Briefcase,
-    Users,
-    DollarSign,
-    Plane,
-    PawPrint,
-    PartyPopper,
-    Wrench,
-    Sprout,
-    Smartphone,
-    Stethoscope,
-    BarChart3,
-    Shield,
-    FileText,
-    Hammer,
-    Sofa,
-    Zap,
-    Lock,
-    ShoppingCart,
-    Hamburger,
-    Coffee,
-    Truck,
-    Package,
-    Beer,
-    ChefHat,
-    Fuel,
-    Bus,
-    ParkingCircle,
-    Bike,
-    Shirt,
-    BookOpen,
-    Sparkles,
-    Gem,
-    Trophy,
-    Gamepad2,
-    Image,
-    Paperclip,
-    Pill,
-    Glasses,
-    Dumbbell,
-    Activity,
-    Brain,
-    Leaf,
-    Monitor,
-    Music,
-    Landmark,
-    Palette,
-    FerrisWheel,
-    Dice1,
-    UserCheck,
-    Building,
-    Megaphone,
-    Scale,
-    Baby,
-    Gift,
-    Droplets,
-    Scissors,
-    TrendingUp,
-    RotateCcw,
-    Clock,
-    AlertTriangle,
-    Lightbulb,
-    Newspaper,
-    Cloud,
-    Headphones,
-    TestTube,
-    Globe,
-    Backpack,
-    User,
-  };
+  // Check if icon is already loaded
+  const icon = iconMap.get(iconName);
+  if (icon) return icon;
 
-  const IconComponent = iconMap[iconName];
-  return IconComponent || Tag; // Default to Tag if icon not found
+  // Lazy load the icon
+  try {
+    const iconModule = require(`lucide-react/dist/esm/icons/${iconName}`);
+    const IconComponent = iconModule.default || iconModule[iconName];
+    if (IconComponent) {
+      iconMap.set(iconName, IconComponent);
+      return IconComponent;
+    }
+  } catch {
+    // Icon not found, continue to fallback
+  }
+
+  // Fallback to Tag icon
+  const { Tag } = require("lucide-react");
+  return Tag;
 };
 
 export default function CategoriesPage() {
@@ -291,42 +168,44 @@ export default function CategoriesPage() {
             </div>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categoriesData.map((category) => (
-              <Card key={category.id} className="p-4">
-                <div className="mb-3 flex items-center gap-3">
-                  {(() => {
-                    const IconComponent = getIconComponent(
-                      category.icon || "Tag",
-                    );
-                    return <IconComponent className="h-8 w-8" />;
-                  })()}
-                  <div>
-                    <h3 className="font-semibold">{category.name}</h3>
-                    <p className="text-gray-500 text-sm">
-                      {category.subcategories.length} subcategories
-                    </p>
-                  </div>
-                </div>
-
-                {category.subcategories.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
-                    {category.subcategories.map((subcategory) => (
-                      <div
-                        key={subcategory.id}
-                        className="flex items-center gap-2 rounded bg-gray-50 p-2 text-sm"
-                      >
-                        {(() => {
-                          const IconComponent = getIconComponent(
-                            subcategory.icon || "Tag",
-                          );
-                          return <IconComponent className="h-5 w-5" />;
-                        })()}
-                        <span className="truncate">{subcategory.name}</span>
-                      </div>
-                    ))}
-                  </div>
+              <Card
+                key={category.id}
+                className={cn(
+                  "border-2 transition-all hover:shadow-md",
+                  getTailwindColorClasses(category.color, 500).border,
                 )}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {(() => {
+                        const IconComponent = getIconComponent(
+                          category.icon || "Tag",
+                        );
+                        return <IconComponent className="h-8 w-8" />;
+                      })()}
+                      <CardTitle className="font-semibold text-lg">
+                        {category.name}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex flex-row flex-wrap gap-2">
+                    {category.subcategories
+                      .sort((a, b) => (a.position || 0) - (b.position || 0))
+                      .map((subcategory) => (
+                        <CategoryPill
+                          key={subcategory.id}
+                          name={subcategory.name}
+                          color={subcategory.color}
+                          colorIntensity={subcategory.colorIntensity || 100}
+                        />
+                      ))}
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>

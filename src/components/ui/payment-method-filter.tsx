@@ -33,7 +33,7 @@ export function PaymentMethodFilter({
     { value: "all" as const, label: "All Methods", icon: null },
     ...(paymentMethods?.map((method) => ({
       value: method.code as PaymentMethodFilterType,
-      label: method.displayName,
+      label: method.name,
       icon: method.name,
     })) || []),
   ];

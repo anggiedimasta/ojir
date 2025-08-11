@@ -1,209 +1,79 @@
-import {
-  Activity,
-  AlertTriangle,
-  Baby,
-  Backpack,
-  BarChart3,
-  Beer,
-  Bike,
-  BookOpen,
-  Brain,
-  Briefcase,
-  Building,
-  Bus,
-  Car,
-  ChefHat,
-  Clock,
-  Cloud,
-  Coffee,
-  Dice1,
-  DollarSign,
-  Droplets,
-  Dumbbell,
-  FerrisWheel,
-  FileText,
-  Film,
-  Fuel,
-  Gamepad2,
-  Gem,
-  Gift,
-  Glasses,
-  Globe,
-  GraduationCap,
-  Hamburger,
-  Hammer,
-  Headphones,
-  Heart,
-  HelpCircle,
-  Home,
-  Image,
-  Landmark,
-  Leaf,
-  Lightbulb,
-  Lock,
-  Megaphone,
-  Monitor,
-  Music,
-  Newspaper,
-  Package,
-  Palette,
-  Paperclip,
-  ParkingCircle,
-  PartyPopper,
-  PawPrint,
-  Pill,
-  Plane,
-  RotateCcw,
-  Scale,
-  Scissors,
-  Shield,
-  Shirt,
-  ShoppingBag,
-  ShoppingCart,
-  Smartphone,
-  Sofa,
-  Sparkles,
-  Sprout,
-  Stethoscope,
-  Tag,
-  TestTube,
-  TrendingUp,
-  Trophy,
-  Truck,
-  User,
-  UserCheck,
-  Users,
-  Utensils,
-  Wrench,
-  Zap,
-} from "lucide-react";
+import { cn } from "~/lib/utils";
 
-// Helper function to get Lucide icon component by name
-const getIconComponent = (iconName: string) => {
-  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    Activity,
-    AlertTriangle,
-    Baby,
-    Backpack,
-    BarChart3,
-    Beer,
-    Bike,
-    BookOpen,
-    Brain,
-    Briefcase,
-    Building,
-    Bus,
-    Car,
-    ChefHat,
-    Clock,
-    Cloud,
-    Coffee,
-    Dice1,
-    DollarSign,
-    Droplets,
-    Dumbbell,
-    FerrisWheel,
-    FileText,
-    Film,
-    Fuel,
-    Gamepad2,
-    Gem,
-    Gift,
-    Glasses,
-    Globe,
-    GraduationCap,
-    Hamburger,
-    Hammer,
-    Headphones,
-    Heart,
-    HelpCircle,
-    Home,
-    Image,
-    Landmark,
-    Leaf,
-    Lightbulb,
-    Lock,
-    Megaphone,
-    Monitor,
-    Music,
-    Newspaper,
-    Package,
-    Palette,
-    Paperclip,
-    ParkingCircle,
-    PartyPopper,
-    PawPrint,
-    Pill,
-    Plane,
-    RotateCcw,
-    Scale,
-    Scissors,
-    Shield,
-    Shirt,
-    ShoppingBag,
-    ShoppingCart,
-    Smartphone,
-    Sofa,
-    Sparkles,
-    Sprout,
-    Stethoscope,
-    Tag,
-    TestTube,
-    TrendingUp,
-    Trophy,
-    Truck,
-    User,
-    UserCheck,
-    Users,
-    Utensils,
-    Wrench,
-    Zap,
+// Helper function to get Tailwind color classes
+const getTailwindColorClasses = (color: string, colorIntensity: number) => {
+  const normalizedColor = color.toLowerCase();
+  // Map intensity to the closest available Tailwind intensity
+  const intensity = Math.max(50, Math.min(950, colorIntensity));
+
+  // Find the closest available intensity from the standard set
+  const availableIntensities = [
+    50, 100, 200, 300, 400, 500, 600, 700, 800, 900,
+  ];
+  let closestIntensity = 500; // Default fallback
+
+  for (const level of availableIntensities) {
+    if (Math.abs(level - intensity) < Math.abs(closestIntensity - intensity)) {
+      closestIntensity = level;
+    }
+  }
+
+  // Determine text color based on background intensity for proper contrast
+  let textIntensity: number;
+  if (closestIntensity <= 200) {
+    // Light backgrounds (50, 100, 200) need dark text for contrast
+    textIntensity = 900;
+  } else if (closestIntensity <= 400) {
+    // Medium backgrounds (300, 400) need medium-dark text
+    textIntensity = 800;
+  } else if (closestIntensity <= 600) {
+    // Medium-dark backgrounds (500, 600) need light text
+    textIntensity = 100;
+  } else {
+    // Dark backgrounds (700, 800, 900) need light text for contrast
+    textIntensity = 50;
+  }
+
+  return {
+    background: `bg-${normalizedColor}-${closestIntensity}`,
+    text: `text-${normalizedColor}-${textIntensity}`,
   };
-
-  const IconComponent = iconMap[iconName];
-  return IconComponent || Tag; // Default to Tag if icon not found
 };
 
 interface CategoryPillProps {
-  categoryName?: string | null;
-  categoryIcon?: string | null;
-  subcategoryName?: string | null;
-  subcategoryIcon?: string | null;
+  name: string;
+  color: string; // Tailwind color name
+  colorIntensity?: number; // Tailwind color intensity (100, 200, 300, etc.)
   className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
 export function CategoryPill({
-  categoryName,
-  categoryIcon,
-  subcategoryName,
-  subcategoryIcon,
-  className = "",
+  name,
+  color,
+  colorIntensity = 100,
+  className,
+  size = "md",
 }: CategoryPillProps) {
-  if (!categoryName) return null;
+  const sizeClasses = {
+    sm: "px-2 py-1 text-xs",
+    md: "px-3 py-1.5 text-sm",
+    lg: "px-4 py-2 text-base",
+  };
+
+  const colorClasses = getTailwindColorClasses(color, colorIntensity);
 
   return (
-    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
-      {/* Category Pill */}
-      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-700 text-xs">
-        {categoryIcon &&
-          (() => {
-            const IconComponent = getIconComponent(categoryIcon);
-            return <IconComponent className="h-3 w-3" />;
-          })()}
-        {categoryName}
-      </span>
-
-      {/* Subcategory Pill - only show if different from category */}
-      {subcategoryName && subcategoryName !== categoryName && (
-        <span className="flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 font-medium text-slate-600 text-xs">
-          {subcategoryIcon &&
-            (() => {
-              const IconComponent = getIconComponent(subcategoryIcon);
-              return <IconComponent className="h-3 w-3" />;
-            })()}
-          {subcategoryName}
-        </span>
+    <span
+      className={cn(
+        "inline-flex flex-row items-center rounded-full font-medium",
+        colorClasses.background,
+        colorClasses.text,
+        sizeClasses[size],
+        className,
       )}
-    </div>
+    >
+      {name}
+    </span>
   );
 }

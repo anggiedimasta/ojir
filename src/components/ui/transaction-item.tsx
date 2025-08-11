@@ -209,12 +209,31 @@ export function TransactionItem({
           )}
 
           {/* Category and Subcategory */}
-          <CategoryPill
-            categoryName={transaction.categoryName}
-            categoryIcon={transaction.categoryIcon}
-            subcategoryName={transaction.subcategoryName}
-            subcategoryIcon={transaction.subcategoryIcon}
-          />
+          <div className="flex flex-wrap items-center gap-1">
+            {/* Category Pill */}
+            {transaction.categoryName && (
+              <CategoryPill
+                name={transaction.categoryName}
+                color={transaction.categoryColor || "slate"}
+                size="sm"
+              />
+            )}
+
+            {/* Subcategory Pill - only show if different from category */}
+            {transaction.subcategoryName &&
+              transaction.subcategoryName !== transaction.categoryName && (
+                <CategoryPill
+                  name={transaction.subcategoryName}
+                  color={
+                    transaction.subcategoryColor ||
+                    transaction.categoryColor ||
+                    "slate"
+                  }
+                  colorIntensity={transaction.subcategoryColorIntensity || 100}
+                  size="sm"
+                />
+              )}
+          </div>
 
           {transaction.location && (
             <span className="text-slate-500 text-xs">
