@@ -7,43 +7,21 @@ import {
   FileText,
   TrendingDown,
   TrendingUp,
-  Users,
   Wallet,
 } from "lucide-react";
-import type { Session } from "next-auth";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
 import {
-  CategoryDistributionChart,
-  IncomeVsExpensesChart,
-  SpendingTrendChart,
+  CategoryBreakdownChart,
   WalletBalanceChart,
 } from "~/components/charts";
 import { useChartData } from "~/hooks/use-chart-data";
 import { useSidebarStoreHydrated } from "../../../store/sidebar-store";
 
 // Lazy load charts for better performance
-const LazySpendingTrendChart = dynamic(
+const LazyCategoryBreakdownChart = dynamic(
   () =>
     import("~/components/charts").then((mod) => ({
-      default: mod.SpendingTrendChart,
-    })),
-  { ssr: false },
-) as React.ComponentType<{
-  data: Array<{
-    period: string;
-    income: number;
-    expenses: number;
-    netIncome: number;
-  }>;
-  title?: string;
-  className?: string;
-}>;
-
-const LazyCategoryDistributionChart = dynamic(
-  () =>
-    import("~/components/charts").then((mod) => ({
-      default: mod.CategoryDistributionChart,
+      default: mod.CategoryBreakdownChart,
     })),
   { ssr: false },
 ) as React.ComponentType<{
@@ -51,25 +29,10 @@ const LazyCategoryDistributionChart = dynamic(
     name: string;
     value: number;
     color: string;
+    colorIntensity?: number;
   }>;
   title?: string;
-  className?: string;
-}>;
-
-const LazyIncomeVsExpensesChart = dynamic(
-  () =>
-    import("~/components/charts").then((mod) => ({
-      default: mod.IncomeVsExpensesChart,
-    })),
-  { ssr: false },
-) as React.ComponentType<{
-  data: Array<{
-    period: string;
-    income: number;
-    expenses: number;
-    netIncome: number;
-  }>;
-  title?: string;
+  subtitle?: string;
   className?: string;
 }>;
 
@@ -86,6 +49,7 @@ const LazyWalletBalanceChart = dynamic(
     change: number;
   }>;
   title?: string;
+  subtitle?: string;
   className?: string;
 }>;
 
@@ -111,12 +75,8 @@ interface QuickAction {
   icon: React.ReactNode;
 }
 
-interface DashboardContentProps {
-  session: Session;
-}
-
-export function DashboardContent({ session }: DashboardContentProps) {
-  const { isCollapsed, hasHydrated } = useSidebarStoreHydrated();
+export function DashboardContent() {
+  const { isCollapsed } = useSidebarStoreHydrated();
   const {
     spendingTrend,
     categoryDistribution,
@@ -127,24 +87,11 @@ export function DashboardContent({ session }: DashboardContentProps) {
   } = useChartData();
 
   // Transform real data for charts
-  const spendingTrendData = spendingTrend.map((item) => ({
-    period: item.period,
-    income: item.income,
-    expenses: item.expenses,
-    netIncome: item.income - item.expenses,
-  }));
-
   const categoryData = categoryDistribution.map((item) => ({
     name: item.name,
     value: item.amount,
     color: item.color,
-  }));
-
-  const cashFlowData = spendingTrend.map((item) => ({
-    period: item.period,
-    income: item.income,
-    expenses: item.expenses,
-    netIncome: item.income - item.expenses,
+    colorIntensity: 500, // Default to 500 intensity for main categories
   }));
 
   const balanceData = walletBalanceHistory.map((item, index, array) => ({
@@ -348,107 +295,31 @@ export function DashboardContent({ session }: DashboardContentProps) {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Spending Trend Chart */}
-        <div className="col-span-4">
-          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-indigo-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-            <div className="relative z-10">
-              <h3 className="font-semibold text-lg text-slate-800">
-                Spending Trends
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Monthly income vs expenses
-              </p>
-            </div>
-            <div className="relative z-10 pt-4">
-              <LazySpendingTrendChart
-                data={spendingTrendData}
-                title="Spending Trends"
-                className="h-[300px]"
-              />
-            </div>
-          </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+        {/* Balance History Chart */}
+        <div className="col-span-3">
+          <LazyWalletBalanceChart
+            data={balanceData}
+            title="Balance History"
+            subtitle="Wallet balance over time"
+            className="h-[400px]"
+          />
         </div>
 
         {/* Category Distribution Chart */}
         <div className="col-span-3">
-          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-transparent to-teal-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-            <div className="relative z-10">
-              <h3 className="font-semibold text-lg text-slate-800">
-                Category Breakdown
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Where your money goes
-              </p>
-            </div>
-            <div className="relative z-10 pt-4">
-              <LazyCategoryDistributionChart
-                data={categoryData}
-                title="Category Distribution"
-                className="h-[300px]"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Income vs Expenses Chart */}
-        <div className="col-span-4">
-          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 via-transparent to-orange-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-            <div className="relative z-10">
-              <h3 className="font-semibold text-lg text-slate-800">
-                Cash Flow
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Income vs expenses comparison
-              </p>
-            </div>
-            <div className="relative z-10 pt-4">
-              <LazyIncomeVsExpensesChart
-                data={cashFlowData}
-                title="Cash Flow"
-                className="h-[300px]"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Wallet Balance Chart */}
-        <div className="col-span-3">
-          <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 via-transparent to-pink-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-            <div className="relative z-10">
-              <h3 className="font-semibold text-lg text-slate-800">
-                Balance History
-              </h3>
-              <p className="text-muted-foreground text-sm">
-                Wallet balance over time
-              </p>
-            </div>
-            <div className="relative z-10 pt-4">
-              <LazyWalletBalanceChart
-                data={balanceData}
-                title="Balance History"
-                className="h-[300px]"
-              />
-            </div>
-          </div>
+          <LazyCategoryBreakdownChart
+            data={categoryData}
+            title="Category Distribution"
+            subtitle="Where your money goes"
+            className="h-[400px]"
+          />
         </div>
       </div>
 
       {/* Recent Activity & Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-6">
+        <div className="col-span-3">
           <div className="group relative overflow-hidden rounded-xl border-0 bg-gradient-to-br from-white via-slate-50 to-white p-6 shadow-lg transition-all duration-300 hover:shadow-xl">
             {/* Subtle background pattern */}
             <div className="absolute inset-0 bg-gradient-to-br from-rose-50/50 via-transparent to-pink-50/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />

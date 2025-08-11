@@ -1,9 +1,6 @@
-export { SpendingTrendChart } from "./spending-trend-chart";
-export { CategoryDistributionChart } from "./category-distribution-chart";
-export { IncomeVsExpensesChart } from "./income-vs-expenses-chart";
+export { CategoryBreakdownChart } from "./category-breakdown-chart";
 export { WalletBalanceChart } from "./wallet-balance-chart";
 export { MiniSpendingTrendChart } from "./mini-spending-trend-chart";
-export { CategoryBreakdownChart } from "./category-breakdown-chart";
 export { MonthlyComparisonChart } from "./monthly-comparison-chart";
 export { PaymentMethodDistributionChart } from "./payment-method-distribution-chart";
 export { TransactionTypeBreakdownChart } from "./transaction-type-breakdown-chart";

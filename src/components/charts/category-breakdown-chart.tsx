@@ -13,49 +13,38 @@ interface CategoryBreakdownData {
 interface CategoryBreakdownChartProps {
   data: CategoryBreakdownData[];
   title?: string;
+  subtitle?: string;
   className?: string;
 }
 
-// Function to get Tailwind color classes for chart
-const getTailwindColorClasses = (color: string, colorIntensity: number) => {
+// Function to get chart fill color using Tailwind CSS custom properties
+const getChartFillColor = (color: string, intensity = 500): string => {
   const normalizedColor = color.toLowerCase();
-  // Map intensity to the closest available Tailwind intensity
-  const intensity = Math.max(50, Math.min(950, colorIntensity));
+  const normalizedIntensity = Math.max(50, Math.min(950, intensity));
 
   // Find the closest available intensity from the standard set
   const availableIntensities = [
     50, 100, 200, 300, 400, 500, 600, 700, 800, 900,
   ];
-  let closestIntensity = 500; // Default fallback
+  let closestIntensity = 500;
 
   for (const level of availableIntensities) {
-    if (Math.abs(level - intensity) < Math.abs(closestIntensity - intensity)) {
+    if (
+      Math.abs(level - normalizedIntensity) <
+      Math.abs(closestIntensity - normalizedIntensity)
+    ) {
       closestIntensity = level;
     }
   }
 
-  return {
-    background: `bg-${normalizedColor}-${closestIntensity}`,
-    text: `text-${normalizedColor}-${closestIntensity}`,
-    border: `border-${normalizedColor}-${closestIntensity}`,
-  };
-};
-
-// Function to get CSS custom property value for chart fill
-const getChartColor = (color: string, intensity = 500): string => {
-  const normalizedColor = color.toLowerCase();
-  const normalizedIntensity = Math.max(50, Math.min(950, intensity));
-
-  // Get the CSS custom property value
-  const cssVar = `var(--${normalizedColor}-${normalizedIntensity})`;
-
-  // Fallback to a default color if CSS variable is not available
-  return cssVar || "#6b7280"; // slate-500 as fallback
+  // Use CSS custom property that Tailwind provides
+  return `var(--color-${normalizedColor}-${closestIntensity})`;
 };
 
 export function CategoryBreakdownChart({
   data,
   title = "Category Breakdown",
+  subtitle = "Where your money goes",
   className = "",
 }: CategoryBreakdownChartProps) {
   const formatCurrency = (value: number) => {
@@ -65,14 +54,6 @@ export function CategoryBreakdownChart({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
-
-  const formatPercentage = (value: number, total: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "percent",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value / total);
   };
 
   const CustomTooltip = ({
@@ -85,6 +66,7 @@ export function CategoryBreakdownChart({
       name: string;
       value: number;
       color: string;
+      payload?: { total: number };
     }>;
     label?: string;
   }) => {
@@ -92,50 +74,66 @@ export function CategoryBreakdownChart({
       const data = payload[0];
       if (!data) return null;
 
-      const total = data.value;
+      const totalValue = data.payload?.total || total;
+      const percentage = totalValue > 0 ? (data.value / totalValue) * 100 : 0;
+
       return (
-        <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
-          <p className="font-medium text-slate-900 text-sm">{label}</p>
-          <p className="text-slate-600 text-sm">
-            Amount: {formatCurrency(total)}
-          </p>
-          <p className="text-slate-600 text-sm">
-            Percentage: {formatPercentage(total, total)}
-          </p>
+        <div className="rounded-lg border border-slate-200 bg-white shadow-lg">
+          <p className="mb-2 font-semibold text-slate-900">{label}</p>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 text-sm">Amount:</span>
+              <span className="font-medium text-slate-900 text-sm">
+                {formatCurrency(data.value)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600 text-sm">Percentage:</span>
+              <span className="font-medium text-slate-900 text-sm">
+                {percentage.toFixed(1)}%
+              </span>
+            </div>
+          </div>
         </div>
       );
     }
     return null;
   };
 
+  // Calculate total for percentage calculations
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="font-medium text-slate-700 text-sm">
+    <Card className={`${className}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="font-semibold text-lg text-slate-900">
           {title}
         </CardTitle>
+        {subtitle && (
+          <p className="font-normal text-slate-600 text-sm">{subtitle}</p>
+        )}
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="h-48 w-full">
+      <CardContent className="p-2">
+        <div className="h-72 w-full overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={data.map((item) => ({ ...item, total }))}
                 cx="50%"
                 cy="50%"
-                innerRadius={25}
-                outerRadius={60}
-                paddingAngle={3}
+                innerRadius={30}
+                outerRadius={80}
+                paddingAngle={4}
                 dataKey="value"
                 label={({ name, percent }) =>
                   `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
                 }
                 labelLine={false}
               >
-                {data.map((entry, index) => (
+                {data.map((entry) => (
                   <Cell
                     key={`cell-${entry.name}-${entry.value}`}
-                    fill={getChartColor(
+                    fill={getChartFillColor(
                       entry.color,
                       entry.colorIntensity || 500,
                     )}
