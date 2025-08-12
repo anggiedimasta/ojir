@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { LoadingTimeout, LoadingMessage } from "~/enums";
 
 interface LoadingState {
   isLoading: boolean;
@@ -16,6 +17,9 @@ interface LoadingActions {
   startSync: () => void;
   startClear: () => void;
   startRefetch: () => void;
+  startNavigation: () => void;
+  startNavigationWithTimeout: (timeout?: number) => void;
+  stopNavigation: () => void;
   resetAll: () => void;
 }
 
@@ -43,22 +47,51 @@ export const useLoadingStore = create<LoadingStore>((set) => ({
   startSync: () =>
     set({
       isLoading: true,
-      loadingMessage: "Syncing transactions from emails...",
+      loadingMessage: LoadingMessage.SYNCING_TRANSACTIONS,
       isSyncPending: true,
     }),
 
   startClear: () =>
     set({
       isLoading: true,
-      loadingMessage: "Clearing all transactions...",
+      loadingMessage: LoadingMessage.CLEARING_TRANSACTIONS,
       isClearPending: true,
     }),
 
   startRefetch: () =>
     set({
       isLoading: true,
-      loadingMessage: "Refreshing data...",
+      loadingMessage: LoadingMessage.REFRESHING_DATA,
       isRefetchPending: true,
+    }),
+
+  startNavigation: () =>
+    set({
+      isLoading: true,
+      loadingMessage: LoadingMessage.LOADING_PAGE,
+    }),
+
+  startNavigationWithTimeout: (
+    timeout: number = LoadingTimeout.ROUTE_CHANGE,
+  ) => {
+    set({
+      isLoading: true,
+      loadingMessage: LoadingMessage.LOADING_PAGE,
+    });
+
+    // Auto-stop after timeout
+    setTimeout(() => {
+      set({
+        isLoading: false,
+        loadingMessage: undefined,
+      });
+    }, timeout);
+  },
+
+  stopNavigation: () =>
+    set({
+      isLoading: false,
+      loadingMessage: undefined,
     }),
 
   resetAll: () => set(initialState),

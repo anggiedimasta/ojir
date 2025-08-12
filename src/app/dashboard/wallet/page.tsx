@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { TransactionEditForm } from "~/components/wallet/transaction-edit-form";
+import { TransactionCreateForm } from "~/components/wallet/transaction-create-form";
 import { TransactionList } from "~/components/wallet/transaction-list";
 import { WalletFilters } from "~/components/wallet/wallet-filters";
 import { WalletFormModal } from "~/components/wallet/wallet-form-modal";
@@ -378,6 +379,9 @@ export default function WalletPage() {
             onSync={() => autoResyncMutation.mutate({ maxResults: 100 })}
             isSyncPending={autoResyncMutation.isPending}
             onExport={handleExportTransactions}
+            onAddTransaction={() => {
+              transactionManagement.handleCreateTransaction();
+            }}
           />
 
           <TransactionList
@@ -401,6 +405,14 @@ export default function WalletPage() {
             isOpen={transactionManagement.showTransactionEditForm}
             onClose={transactionManagement.handleCloseTransactionEditForm}
             onSuccess={transactionManagement.handleTransactionEditSuccess}
+          />
+
+          {/* Transaction Create Form Modal */}
+          <TransactionCreateForm
+            isOpen={transactionManagement.showTransactionCreateForm}
+            onClose={transactionManagement.handleCloseTransactionCreateForm}
+            onSuccess={transactionManagement.handleTransactionCreateSuccess}
+            wallets={walletsData as WalletWithBank[]}
           />
         </div>
       </div>

@@ -9,6 +9,7 @@ export { DateRangeDisplay } from "./date-range-display";
 export { EmptyState } from "./empty-state";
 export { Footer } from "./footer";
 export { GlobalLoadingBar } from "./global-loading-bar";
+export { NavigationLoading } from "./navigation-loading";
 
 export { Navbar } from "./navbar";
 export { PaginationControls } from "./pagination-controls";

@@ -272,6 +272,8 @@ export function TransactionEditForm({
       size="xl"
       title="Edit Transaction"
       description="Update your transaction details"
+      closeOnEscape={false}
+      closeOnOverlayClick={false}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Transaction Overview Section */}

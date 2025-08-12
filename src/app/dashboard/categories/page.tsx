@@ -23,31 +23,7 @@ const getTailwindColorClasses = (color: string, colorIntensity: number) => {
   };
 };
 
-// Lazy-loaded icon map - only import icons when first accessed
-const iconMap = new Map<string, React.ComponentType<{ className?: string }>>();
-
-// Helper function to get Lucide icon component by name
-const getIconComponent = (iconName: string) => {
-  // Check if icon is already loaded
-  const icon = iconMap.get(iconName);
-  if (icon) return icon;
-
-  // Lazy load the icon
-  try {
-    const iconModule = require(`lucide-react/dist/esm/icons/${iconName}`);
-    const IconComponent = iconModule.default || iconModule[iconName];
-    if (IconComponent) {
-      iconMap.set(iconName, IconComponent);
-      return IconComponent;
-    }
-  } catch {
-    // Icon not found, continue to fallback
-  }
-
-  // Fallback to Tag icon
-  const { Tag } = require("lucide-react");
-  return Tag;
-};
+import { getIconComponent } from "~/components/ui/dynamic-icon-helper";
 
 export default function CategoriesPage() {
   const { data: session, status } = useSession();

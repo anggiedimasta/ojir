@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "~/trpc/react";
 import { Button } from "./button";
 import { Card } from "./card";
-import { DynamicIcon } from "./dynamic-icon";
+import { getIconComponent } from "./dynamic-icon-helper";
 
 interface PaymentMethodDropdownProps {
   value?: string;
@@ -65,10 +65,12 @@ export function PaymentMethodDropdown({
         disabled={isLoading}
       >
         <div className="flex min-w-0 items-center gap-2">
-          <DynamicIcon
-            iconName={selectedMethod?.icon || undefined}
-            className="h-4 w-4"
-          />
+          {(() => {
+            const IconComponent = getIconComponent(
+              selectedMethod?.icon || "help-circle",
+            );
+            return <IconComponent className="h-4 w-4" />;
+          })()}
           <span className="truncate">
             {selectedMethod ? selectedMethod.name : placeholder}
           </span>
@@ -101,10 +103,12 @@ export function PaymentMethodDropdown({
                   }`}
                   onClick={() => handleSelect(method.code)}
                 >
-                  <DynamicIcon
-                    iconName={method.icon || undefined}
-                    className="h-4 w-4"
-                  />
+                  {(() => {
+                    const IconComponent = getIconComponent(
+                      method.icon || "help-circle",
+                    );
+                    return <IconComponent className="h-4 w-4" />;
+                  })()}
                   <span className="flex-1">{method.name}</span>
                 </button>
               ))

@@ -3,7 +3,7 @@ import { DateFilter } from "~/components/ui/date-filter";
 import { SearchInput } from "~/components/ui/search-input";
 import { SortControls } from "~/components/ui/sort-controls";
 
-import { Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw, Plus } from "lucide-react";
 import { BankFilter } from "~/components/ui/bank-filter";
 import { Button } from "~/components/ui/button";
 import { LimitFilter } from "~/components/ui/limit-filter";
@@ -34,10 +34,12 @@ export function WalletFilters({
   onSync,
   isSyncPending = false,
   onExport,
+  onAddTransaction,
 }: WalletFiltersProps & {
   onSync?: () => void;
   isSyncPending?: boolean;
   onExport?: () => void;
+  onAddTransaction?: () => void;
 }) {
   return (
     <Card className="mb-6 border-slate-200 bg-white p-4 shadow-lg">
@@ -101,6 +103,16 @@ export function WalletFilters({
               title="Export transactions"
             >
               <Download className="h-4 w-4" />
+            </Button>
+          )}
+
+          {onAddTransaction && (
+            <Button
+              onClick={onAddTransaction}
+              className="rounded-lg bg-green-100 px-3 py-2 text-green-700 transition-all duration-200 hover:bg-green-200"
+              title="Add transaction"
+            >
+              <Plus className="h-4 w-4" />
             </Button>
           )}
         </div>

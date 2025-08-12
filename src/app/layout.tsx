@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import { AuthProvider } from "~/components/providers/auth-provider";
 import { GlobalLoadingBar } from "~/components/ui/global-loading-bar";
+import { NavigationLoading } from "~/components/ui/navigation-loading";
 import { Toaster } from "~/components/ui/toaster";
 import { TRPCReactProvider } from "~/trpc/react";
 import { viewport } from "./viewport";
@@ -53,6 +54,7 @@ export default function RootLayout({
         className={`font-sans ${inter.variable} bg-[#0f0f0f] text-white antialiased`}
       >
         <GlobalLoadingBar />
+        <NavigationLoading />
         <AuthProvider>
           <TRPCReactProvider>{children}</TRPCReactProvider>
         </AuthProvider>

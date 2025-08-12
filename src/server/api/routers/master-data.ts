@@ -1,6 +1,7 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { banks, paymentMethods } from "~/server/db/schema";
+import { banks } from "~/server/db/schema";
+import { ojirPaymentMethod } from "../../../../drizzle/schema";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const masterDataRouter = createTRPCRouter({
@@ -34,14 +35,14 @@ export const masterDataRouter = createTRPCRouter({
     try {
       const result = await ctx.db
         .select({
-          code: paymentMethods.code,
-          name: paymentMethods.name,
-          icon: paymentMethods.icon,
-          isActive: paymentMethods.isActive,
+          code: ojirPaymentMethod.code,
+          name: ojirPaymentMethod.name,
+          icon: ojirPaymentMethod.icon,
+          isActive: ojirPaymentMethod.isActive,
         })
-        .from(paymentMethods)
-        .where(eq(paymentMethods.isActive, true))
-        .orderBy(asc(paymentMethods.name));
+        .from(ojirPaymentMethod)
+        .where(eq(ojirPaymentMethod.isActive, true))
+        .orderBy(asc(ojirPaymentMethod.name));
 
       return result;
     } catch (error) {
@@ -49,4 +50,33 @@ export const masterDataRouter = createTRPCRouter({
       return [];
     }
   }),
+
+  // Create new payment method
+  createPaymentMethod: protectedProcedure
+    .input(
+      z.object({
+        code: z.string().min(1).max(50),
+        name: z.string().min(1).max(255),
+        icon: z.string().optional(),
+        isActive: z.boolean().default(true),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const result = await ctx.db
+          .insert(ojirPaymentMethod)
+          .values({
+            code: input.code,
+            name: input.name,
+            icon: input.icon,
+            isActive: input.isActive,
+          })
+          .returning();
+
+        return result[0];
+      } catch (error) {
+        console.error("Error creating payment method:", error);
+        throw new Error("Failed to create payment method");
+      }
+    }),
 });
